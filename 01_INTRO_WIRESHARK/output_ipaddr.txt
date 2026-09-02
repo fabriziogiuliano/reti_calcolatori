@@ -1,0 +1,12 @@
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host noprefixroute
+       valid_lft forever preferred_lft forever
+2: enp1s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether ac:b4:80:40:75:c7 brd ff:ff:ff:ff:ff:ff
+    inet 10.8.8.40/16 brd 10.8.255.255 scope global dynamic enp1s0
+       valid_lft 21098sec preferred_lft 21098sec
+    inet6 fe80::9e9e:8715:942d:ec2/64 scope link noprefixroute
+       valid_lft forever preferred_lft forever

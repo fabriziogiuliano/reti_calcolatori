@@ -1,0 +1,101 @@
+---------------------------------------------------------------------------------------
+ESERCITAZIONE 01 - INTRODUZIONE A WIRESHARK
+Rif. Kurose, "Reti di calcolatori e Internet", Cap. 1 (par. 1.2, 1.3, 1.4, 1.5, 1.6
+e la sezione "Esercitazioni Wireshark", pag. 65-66)
+---------------------------------------------------------------------------------------
+
+OBIETTIVI
+- Individuare le interfacce di rete e l'indirizzamento della propria macchina (par. 1.2).
+- Misurare qualitativamente i ritardi end-to-end verso una destinazione remota con ping e
+  traceroute, distinguendo ritardo di propagazione, di trasmissione e di accodamento (par. 1.4).
+- Catturare da riga di comando (tcpdump), senza filtri, TUTTO il traffico che circola
+  per pochi secondi sull'interfaccia, per vedere concretamente cosa c'è davvero sul cavo
+  di rete (approccio top-down: prima la complessità reale, poi il dettaglio protocollo
+  per protocollo nei capitoli successivi).
+- Riconoscere nella cattura l'incapsulamento a livelli: trama Ethernet, datagramma IP,
+  segmento TCP/UDP, messaggio del protocollo applicativo (par. 1.5).
+- Riflettere sul fatto che lo sniffer (tcpdump/Wireshark) è lo stesso tipo di strumento
+  citato come minaccia alla riservatezza in par. 1.6: chi ha accesso al mezzo condiviso
+  può leggere il traffico non cifrato.
+- Misurare il throughput medio di un trasferimento (F bit / T secondi, par. 1.4.4) e
+  verificare sperimentalmente la regola del collo di bottiglia, throughput = min(Rs, Rc)
+  (par. 1.4.4, Fig. 1.19/1.20), imponendo un limite artificiale al proprio "rubinetto"
+  di banda (Rc) e osservando che il throughput crolla a quel limite.
+- Osservare che, attraversando la rete, si passa per router di ISP diversi: il nucleo
+  di Internet è un'interconnessione di reti indipendenti (par. 1.3).
+
+STEP
+1) 01_test_ipaddr.sh     -> identifica le interfacce di rete e gli indirizzi della macchina.
+2) 02_test_ping.sh        -> misura il RTT verso una destinazione remota.
+3) 03_test_traceroute.sh  -> elenca i router attraversati e il ritardo verso ciascuno.
+4) 04_capture_tcpdump.sh  -> cattura con tcpdump, senza filtri, tutto il traffico per 10
+                              secondi e produce capture_all.pcap (richiede sudo, eseguitelo voi;
+                              nel frattempo navigate normalmente per generare traffico vario).
+5) Trasferite capture_all.pcap sul vostro computer (es. scp) e apritelo con Wireshark.
+6) 05_test_throughput.sh          -> scarica un file di test e misura il throughput medio.
+7) 06_test_throughput_limited.sh  -> scarica un file più piccolo con un tetto di velocità
+                                      imposto via curl (--limit-rate 1M) e misura il throughput.
+
+NOTA - COSA SI VEDE NELL'OUTPUT DI ip addr (output_ipaddr.txt)
+Per ciascuna interfaccia l'output riporta più informazioni, che ritroverete più avanti:
+- Nome interfaccia (es. lo, enp1s0): "lo" è l'interfaccia di loopback, che punta alla
+  macchina stessa (127.0.0.1); le altre sono le interfacce fisiche/virtuali reali.
+- Flag di stato (es. UP, BROADCAST, MULTICAST): indicano se l'interfaccia è attiva e
+  che tipo di invii supporta.
+- mtu: la dimensione massima di dato che l'interfaccia può trasmettere in un solo
+  pacchetto; tornerà utile più avanti parlando di come i protocolli dimensionano i
+  propri messaggi.
+- link/ether: l'indirizzo MAC dell'interfaccia, un identificativo a livello di
+  collegamento (par. 1.5), usato all'interno della rete locale.
+- inet: l'indirizzo IPv4 assegnato, seguito dalla maschera (es. /16), un identificativo
+  a livello di rete (par. 1.2).
+- inet6: il corrispondente indirizzo IPv6.
+- scope: a chi è visibile quell'indirizzo (host = solo alla macchina stessa, link =
+  solo alla rete locale, global = raggiungibile anche da fuori).
+Non serve capire ogni dettaglio adesso: l'idea è notare che una stessa macchina ha più
+indirizzi, a livelli diversi (MAC e IP), cosa che ritroverete analizzando l'incapsulamento
+nella cattura Wireshark.
+
+DOMANDE GUIDA (rispondete osservando la cattura in Wireshark)
+1. Quanti protocolli diversi riconoscete nella colonna "Protocol"? Elencateli (es. ARP,
+   DNS, TCP, UDP, TLS, mDNS...). Vi aspettavate tutto questo traffico "di sottofondo"
+   generato dal solo fatto di avere il computer acceso e connesso?
+2. Trovate una richiesta DNS: qual è il nome risolto e l'indirizzo IP ottenuto?
+3. Individuate l'inizio di una connessione TCP (i primissimi pacchetti di un flusso,
+   prima che venga scambiato qualunque dato applicativo). Quanto tempo intercorre tra
+   il primo pacchetto e la risposta che arriva dall'altro capo? A cosa corrisponde
+   questo intervallo secondo il par. 1.4?
+4. Selezionate un pacchetto qualsiasi e osservate nel pannello dei dettagli i livelli
+   annidati (Frame / Ethernet II / Internet Protocol / TCP o UDP / protocollo applicativo).
+   Fate corrispondere ciascun livello a uno strato della pila Internet vista in par. 1.5.
+5. Quanto traffico è leggibile in chiaro e quanto è cifrato (es. TLS)? Collegate la
+   risposta alla discussione sullo sniffing in par. 1.6: cosa potrebbe vedere chi
+   catturasse il vostro traffico su una rete condivisa?
+6. Confrontate il RTT stimato da ping (output_ping.txt) con i tempi tra richiesta e
+   risposta che osservate in Wireshark per qualche scambio TCP. Sono compatibili?
+7. In output_traceroute.txt scegliete 2-3 hop intermedi (non il primo, che è il vostro
+   router di casa/campus) e cercatene l'IP su un servizio come ipinfo.io o bgp.he.net:
+   a quale organizzazione/ISP appartiene ciascuno? Cambia lungo il percorso? Collegate
+   la risposta al concetto di "interconnessione tra ISP" del par. 1.3 (Fig. 1.15).
+8. In output_throughput.txt: qual è il throughput medio ottenuto? È vicino alla velocità
+   nominale della vostra connessione? Con il tempo misurato, calcolate manualmente F/T
+   e verificate che corrisponda al valore riportato da curl (par. 1.4.4).
+9. Rilanciando 05_test_throughput.sh a video (senza redirezione) curl mostra anche una
+   tabella con "Average Speed (Dload)" e "Current Speed": la prima è il throughput
+   medio F/T, la seconda quello istantaneo nell'ultimo istante campionato — la stessa
+   distinzione fatta dal Kurose in par. 1.4.4. Sono uguali? Perché no?
+10. Confrontate il valore medio con una stima manuale di F/T, ottenuta dividendo la
+    dimensione del file per il "Time Total": il risultato coincide con "Average Speed"?
+    Se c'è uno scarto, a cosa può essere dovuto (DNS lookup, apertura della connessione
+    prima che inizi il vero trasferimento dati, inclusi nel tempo totale ma non nel
+    throughput "puro" di trasferimento)?
+11. Confrontate output_throughput.txt (senza limiti) con output_throughput_limited.txt
+    (con --limit-rate 1M): di quanto cala il throughput medio? Si avvicina a 1 MB/s
+    (il limite imposto) oppure alla velocità reale della vostra connessione?
+12. Nel modello del Kurose (Fig. 1.19, par. 1.4.4) il throughput end-to-end è
+    min(Rs, Rc), dove Rs è la velocità del server e Rc quella del client. Nel test
+    limitato, chi sta giocando il ruolo del "collo di bottiglia" (bottleneck link)?
+    Rifate lo stesso confronto catturando il traffico con 04_capture_tcpdump.sh mentre
+    gira 06_test_throughput_limited.sh: in Wireshark, i pacchetti TCP arrivano a intervalli
+    regolari o "a raffica"? Cosa vi aspettereste con un rubinetto stretto rispetto a uno
+    aperto?
