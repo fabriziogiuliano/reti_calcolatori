@@ -1,0 +1,65 @@
+---------------------------------------------------------------------------------------
+ESERCITAZIONE 02.1 - HTTP: PRIMO CONTATTO (richiesta/risposta grezza su TCP)
+Rif. Kurose, "Reti di calcolatori e Internet", Cap. 2 (par. 2.2.1, 2.2.2, 2.2.3
+e l'esperimento telnet proposto a pag. 87)
+---------------------------------------------------------------------------------------
+
+OBIETTIVI
+- Osservare che HTTP è un protocollo a livello applicativo che si appoggia su TCP:
+  prima si apre una connessione TCP verso la porta 80, poi client e server si scambiano
+  messaggi HTTP in puro testo ASCII sulla stessa connessione, tramite le rispettive
+  socket (par. 2.2.1).
+- Verificare che HTTP è senza memoria di stato (stateless protocol): il server risponde
+  alla richiesta senza conservare alcuna informazione sulle richieste precedenti dello
+  stesso client (par. 2.2.1).
+- Riconoscere il formato del messaggio di richiesta: riga di richiesta (metodo, URL,
+  versione) seguita da righe di intestazione, il tutto terminato da una riga vuota
+  (par. 2.2.3, Fig. 2.8).
+- Riconoscere il formato del messaggio di risposta: riga di stato (versione, codice di
+  stato, reason phrase), righe di intestazione, corpo del messaggio (par. 2.2.3, Fig. 2.9).
+- Capire perché l'header Host: sia comunque necessario anche se la connessione TCP è
+  già stabilita con l'host giusto: serve alle cache/proxy e al virtual hosting, di cui
+  si parlerà in 03_LOCAL_CACHE (par. 2.2.3, anticipa 2.2.5).
+- Osservare l'effetto dell'header Connection: close: il client chiede esplicitamente al
+  server di non usare connessioni persistenti, che sono invece il comportamento di
+  default in HTTP/1.1 (par. 2.2.2) - il contrario verrà approfondito in 05_PERSISTENT_HTTP.
+- Rifare "a mano" l'esperimento che il Kurose stesso propone a pag. 87 (telnet verso un
+  web server, GET a riga singola), confrontandolo poi con lo stesso identico GET fatto
+  via codice con i socket Python, senza alcuna libreria HTTP di alto livello.
+
+STEP
+1) 01_socket_test.txt -> log di 4 esperimenti manuali equivalenti (telnet, netcat, ncat,
+                          ncat --ssl) verso unipa.it/www.unipa.it: stessa identica
+                          richiesta HTTP, strumenti diversi per aprire la connessione
+                          TCP e scrivere/leggere byte grezzi sul socket.
+2) 02_comparison_telnet_netcat.pcapng -> cattura Wireshark degli scambi di cui sopra:
+                          apritela per vedere il three-way handshake TCP prima del GET
+                          e la chiusura della connessione dopo la risposta.
+3) 03_get_http_sock_unipa.py -> stessa richiesta, questa volta costruita e inviata da
+                          un programma Python con la sola libreria socket: si vede
+                          ogni singolo byte che va sulla rete, riga per riga.
+
+DOMANDE GUIDA
+1. In 01_socket_test.txt tutti gli esperimenti ricevono lo stesso status code (302).
+   Cos'è il codice 302 e tramite quale riga di intestazione il server comunica al
+   client dove si trova la nuova risorsa? (anticipazione di 02_REDIRECT)
+2. Aprendo 02_comparison_telnet_netcat.pcapng in Wireshark, individuate il three-way
+   handshake TCP (SYN, SYN-ACK, ACK) prima del pacchetto che contiene il GET: quanti
+   RTT servono prima che parta il primo byte della richiesta applicativa? Confrontate
+   con il calcolo "2 RTT + tempo di trasmissione" di Fig. 2.7 (par. 2.2.2).
+3. Nello stesso pcap, dopo la risposta HTTP il server chiude la connessione: quale
+   flag TCP osservate? Collegate l'osservazione all'header Connection: close inviato
+   nella richiesta.
+4. Confrontate riga per riga la richiesta HTTP scritta a mano in
+   03_get_http_sock_unipa.py con quella digitata a mano su telnet in
+   01_socket_test.txt: quali header sono identici? Quali differiscono e perché
+   (es. User-Agent)?
+5. Nel codice di 03_get_http_sock_unipa.py il ciclo "while True: sock.recv(1024)"
+   termina da solo, senza mai leggere l'header Content-Length. Perché funziona?
+   Cosa succederebbe, in teoria, se togliessimo Connection: close dalla richiesta?
+6. La connessione TCP è già stabilita con l'IP giusto: perché HTTP/1.1 richiede
+   comunque l'header Host:? (par. 2.2.3 - la risposta anticipa il ruolo dei proxy
+   che vedrete in 03_LOCAL_CACHE, par. 2.2.5).
+7. Ripetete l'esperimento di pag. 87 del Kurose sostituendo GET con HEAD nella
+   richiesta (via telnet o modificando 03_get_http_sock_unipa.py): cosa cambia nella
+   risposta del server? In quali situazioni può essere utile a uno sviluppatore?
