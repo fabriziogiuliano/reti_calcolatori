@@ -2,12 +2,23 @@
 ESEMPIO 1: TELNET
 ---------------------------------------------------------------------------------------
 
-telnet unipa.it 80                   
+COMANDO:
+telnet unipa.it 80
+
+OUTPUT:
+
 Trying 147.163.158.6...
 Connected to unipa.it.
 Escape character is '^]'.
+
+INPUT DA DARE AL PROMPT TELNET:
+
 GET / HTTP/1.1
 Host: unipa.it
+
+<-- IMPORTANTE!!! il protocollo prevede che si debba fare un ritorno a capo!
+
+OUTPUT:
 
 HTTP/1.1 302 Found
 Date: Sun, 05 Oct 2025 09:29:38 GMT
@@ -29,11 +40,18 @@ Content-Type: text/html; charset=iso-8859-1
 ---------------------------------------------------------------------------------------
 ESAEMPIO 2: netcat
 ---------------------------------------------------------------------------------------
-
+COMANDO:
 nc -cv unipa.it 80
+
+OUTPUT:
 Connection to unipa.it port 80 [tcp/http] succeeded!
+
+INPUT PROMPT:
 GET / HTTP/1.1
 Host: unipa.it
+
+<-- NON DIMENTICARE IL RITORNO A CAPO
+OTUPUT:
 
 HTTP/1.1 302 Found
 Date: Sun, 05 Oct 2025 09:28:45 GMT
@@ -79,8 +97,10 @@ Content-Type: text/html; charset=iso-8859-1
 ---------------------------------------------------------------------------------------
 ESAEMPIO 4: ncat with ssl (check the redirect behavior)
 ---------------------------------------------------------------------------------------
-
+COMANDO:
 ncat --ssl -v -C www.unipa.it 443
+
+INPUT DA PROMPT:
 GET / HTTP/1.1
 Host: www.unipa.it
 

@@ -1,0 +1,68 @@
+---------------------------------------------------------------------------------------
+ESERCITAZIONE 02.4 - HTTP: MANTENERE LO STATO CON I COOKIE
+Rif. Kurose, "Reti di calcolatori e Internet", Cap. 2 (par. 2.2.4, pag. 87-89)
+---------------------------------------------------------------------------------------
+
+OBIETTIVI
+- Ricollegarsi al fatto che HTTP è senza memoria di stato (par. 2.2.1, già visto in
+  01_SIMPLE) e capire perché ciò non basta per applicazioni che devono riconoscere un
+  utente da una richiesta all'altra: i cookie sono il meccanismo che HTTP adotta per
+  colmare questo limite (par. 2.2.4).
+- Individuare, nel codice, le quattro componenti della tecnologia cookie descritte dal
+  Kurose (pag. 88): (1) la riga Set-Cookie: nella risposta HTTP, (2) la riga Cookie:
+  nella richiesta HTTP successiva, (3) un file mantenuto sul sistema dell'utente - qui
+  session_cookies.pkl al posto del cookie jar del browser - e (4) un database sul sito
+  che associa l'identificativo ai dati dell'utente.
+- Riprodurre, su più esecuzioni dello script invece che su più giorni, lo stesso schema
+  dell'esempio di Susan su Amazon (Fig. 2.10, pag. 88-89): prima esecuzione senza
+  cookie -> il server ne assegna uno nuovo; esecuzioni successive -> il cookie viene
+  già incluso automaticamente nella richiesta, senza bisogno di richiederne uno nuovo.
+- Notare che l'endpoint usato per impostare il cookie risponde con una redirezione
+  (3xx) prima di mostrare l'esito finale: lo stesso meccanismo di 02_REDIRECT, ma qui
+  gestito in automatico dalla libreria requests invece che a mano con i socket, come
+  invece hanno fatto tutti gli script precedenti in questa cartella HTTP.
+- Riflettere sul tema controverso sollevato dal Kurose a pag. 89 (i cookie come
+  possibile violazione della privacy dell'utente), usando questo piccolo esperimento
+  come esempio concreto e non solo come discussione astratta.
+
+STEP
+1) 01_cookies.py -> crea una Session HTTP, carica eventuali cookie salvati in
+                     precedenza (session_cookies.pkl), chiede all'utente se vuole
+                     impostare un nuovo cookie name=value, verifica lo stato finale
+                     dei cookie interrogando /cookies, e salva la sessione su disco
+                     per la prossima esecuzione.
+
+DOMANDE GUIDA
+1. Cancellate (o rinominate) session_cookies.pkl e lanciate lo script per la prima
+   volta: quale messaggio iniziale stampa riguardo il file dei cookie? Rispondete "no"
+   (INVIO) alla richiesta di un nuovo cookie: cosa mostra la sezione RAW HTTP REQUEST
+   finale riguardo l'header Cookie?
+2. Rilanciate lo script e, questa volta, alla richiesta "Nome cookie:" / "Valore
+   cookie:" inserite un nome e un valore a vostra scelta: individuate nell'output la
+   riga Set-Cookie: evidenziata - corrisponde a quanto descritto per Susan in Fig.
+   2.10 del Kurose (server che assegna un identificativo)?
+3. Rilanciate subito dopo lo script rispondendo di nuovo INVIO (nessun nuovo cookie):
+   nella richiesta finale, la riga Cookie: (in grassetto) contiene lo stesso valore
+   impostato al punto 2? Cosa avete dovuto fare voi, stavolta, per ottenerla - nulla,
+   giusto? Collegate la risposta al fatto che il browser di Susan "continua a inserire
+   la riga Cookie: 1678" anche una settimana dopo, senza che lei debba fare nulla.
+4. Guardate nel codice come viene deciso se richiedere o meno un nuovo cookie al
+   server (session.cookies.get(name) == value): cosa succede se inserite lo STESSO
+   nome ma un valore DIVERSO da quello già in sessione? Viene comunque inviata una
+   richiesta di set?
+5. Delle quattro componenti della tecnologia cookie elencate dal Kurose (pag. 88),
+   quale NON è dimostrabile con questo script? (suggerimento: httpbin/nghttp2.org è un
+   servizio di test pubblico, non un vero e-commerce con un database di utenti reali)
+6. Nel codice, la richiesta a .../cookies/set/<nome>/<valore> produce una risposta
+   memorizzata in response_set.history[0]: a quale codice di stato corrisponde? Che
+   relazione ha con quanto avete visto in 02_REDIRECT, dove dovevate seguire voi
+   stessi, a mano, l'header Location?
+7. Cancellare session_cookies.pkl equivale, nel mondo reale, a un'azione ben precisa
+   che fate abitualmente dal browser: quale? Che effetto avrebbe sul vostro
+   "identificativo utente" lato server, secondo l'esempio del Kurose?
+8. Il Kurose usa l'esempio di Susan per introdurre sia i vantaggi dei cookie (carrello
+   della spesa, one-click shopping) sia le controversie sulla privacy (pag. 89). Nel
+   vostro esperimento, se qualcuno catturasse il traffico (come nella pcap di
+   01_INTRO_WIRESHARK) e leggesse solo l'header Cookie, cosa potrebbe dedurre? È
+   diverso, in termini di rischio per la privacy, rispetto a leggere l'header
+   User-Agent o Host?
