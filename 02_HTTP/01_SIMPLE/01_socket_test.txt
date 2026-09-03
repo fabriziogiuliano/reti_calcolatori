@@ -1,0 +1,87 @@
+---------------------------------------------------------------------------------------
+ESEMPIO 1: TELNET
+---------------------------------------------------------------------------------------
+
+telnet unipa.it 80                   
+Trying 147.163.158.6...
+Connected to unipa.it.
+Escape character is '^]'.
+GET / HTTP/1.1
+Host: unipa.it
+
+HTTP/1.1 302 Found
+Date: Sun, 05 Oct 2025 09:29:38 GMT
+Server: Apache/2.4.37 (Red Hat Enterprise Linux) OpenSSL/1.1.1g mod_fcgid/2.3.9
+Location: https://www.unipa.it/
+Content-Length: 205
+Content-Type: text/html; charset=iso-8859-1
+
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html><head>
+<title>302 Found</title>
+</head><body>
+<h1>Found</h1>
+<p>The document has moved <a href="https://www.unipa.it/">here</a>.</p>
+</body></html>
+
+
+
+---------------------------------------------------------------------------------------
+ESAEMPIO 2: netcat
+---------------------------------------------------------------------------------------
+
+nc -cv unipa.it 80
+Connection to unipa.it port 80 [tcp/http] succeeded!
+GET / HTTP/1.1
+Host: unipa.it
+
+HTTP/1.1 302 Found
+Date: Sun, 05 Oct 2025 09:28:45 GMT
+Server: Apache/2.4.37 (Red Hat Enterprise Linux) OpenSSL/1.1.1g mod_fcgid/2.3.9
+Location: https://www.unipa.it/
+Content-Length: 205
+Content-Type: text/html; charset=iso-8859-1
+
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html><head>
+<title>302 Found</title>
+</head><body>
+<h1>Found</h1>
+<p>The document has moved <a href="https://www.unipa.it/">here</a>.</p>
+</body></html>
+
+
+---------------------------------------------------------------------------------------
+ESAEMPIO 3: ncat (check the redirect behavior)
+---------------------------------------------------------------------------------------
+
+ncat -v -C www.unipa.it 80
+Ncat: Version 7.97 ( https://nmap.org/ncat )
+Ncat: Connected to 147.163.158.6:80.
+GET / HTTP/1.1
+Host: www.unipa.it
+
+HTTP/1.1 302 Found
+Date: Mon, 06 Oct 2025 09:22:21 GMT
+Server: Apache/2.4.37 (Red Hat Enterprise Linux) OpenSSL/1.1.1g mod_fcgid/2.3.9
+Location: https://www.unipa.it/
+Content-Length: 205
+Content-Type: text/html; charset=iso-8859-1
+
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html><head>
+<title>302 Found</title>
+</head><body>
+<h1>Found</h1>
+<p>The document has moved <a href="https://www.unipa.it/">here</a>.</p>
+</body></html>
+
+---------------------------------------------------------------------------------------
+ESAEMPIO 4: ncat with ssl (check the redirect behavior)
+---------------------------------------------------------------------------------------
+
+ncat --ssl -v -C www.unipa.it 443
+GET / HTTP/1.1
+Host: www.unipa.it
+
+NOTE: Output is too long, it is the full answer of unipa.it homepage
