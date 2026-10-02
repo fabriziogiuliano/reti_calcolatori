@@ -1,0 +1,26 @@
+# Python packages for all lab folders.
+# The new 02_HTTP exercises use the standard library only; these cover the rest.
+
+# HTTP clients/servers (02_HTTP, 04_DNS)
+requests
+httpx[http2]
+h2
+flask
+hypercorn          # HTTP/2 server (02_HTTP/02_06_HTTP_HOL)
+
+# Packet capture / process monitoring (02_HTTP, archive)
+scapy
+psutil
+
+# Plots (02_HTTP archive benchmarks)
+numpy
+matplotlib
+
+# SMTP (03_SMTP)
+aiosmtpd
+
+# DNS and IP geolocation (04_DNS)
+dnspython
+geopy
+geocoder
+ip2geotools

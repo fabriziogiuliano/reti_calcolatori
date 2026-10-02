@@ -1,0 +1,6 @@
+From: Alice <alice@unipa.it>
+To: Bob <bob@example.com>
+Subject: Hello from curl
+
+Hi Bob,
+this mail was sent by curl.
