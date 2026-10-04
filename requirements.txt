@@ -1,26 +1,17 @@
-# Python packages for all lab folders.
-# The new 02_HTTP exercises use the standard library only; these cover the rest.
+# Python packages for the lab folders.
+# Most exercises use the standard library only.
 
-# HTTP clients/servers (02_HTTP, 04_DNS)
+# --- Used by the labs ---
+hypercorn          # HTTP/2 server (02_HTTP/02_06_HTTP_HOL)
+aiosmtpd           # local mail server (03_SMTP)
+
+# --- Only for the old scripts in _archivio/ ---
 requests
 httpx[http2]
 h2
 flask
-hypercorn          # HTTP/2 server (02_HTTP/02_06_HTTP_HOL)
-
-# Packet capture / process monitoring (02_HTTP, archive)
 scapy
 psutil
-
-# Plots (02_HTTP archive benchmarks)
 numpy
 matplotlib
-
-# SMTP (03_SMTP)
-aiosmtpd
-
-# DNS and IP geolocation (04_DNS)
 dnspython
-geopy
-geocoder
-ip2geotools

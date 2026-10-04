@@ -6,6 +6,25 @@ Linux install: `sudo apt install dnsutils` (macOS: already installed)
 
 Two tools are enough: `host` (simple answers) and `dig` (shows the DNS records).
 
+### The `dig` options used in this lab
+
+A `dig` command is: `dig [options] name [type]`. The options that start with `+` choose **what to print** or **how to ask**.
+
+| Option | What it does | First used in |
+|---|---|---|
+| `+noall` | print **nothing** (used together with the next one) | 3 |
+| `+answer` | print only the **ANSWER** section: the records we asked for | 3 |
+| `+short` | print only the **Value** of the records, nothing else | 4 |
+| `A`, `AAAA`, `NS`, `MX`, `CNAME`, `TXT` | the **type** of record to ask for (default: `A`) | 4 |
+| `-x 8.8.8.8` | reverse lookup: ask for the **name** of an IP address (type PTR) | 4 |
+| `+stats` | also print some statistics: the **Query time** and the **SERVER** that answered | 5 |
+| `.` (as the name) | the **root** of the DNS tree | 6 |
+| `+trace` | do not ask the local DNS server: start from the **root** servers and follow the hierarchy step by step, printing every answer | 6 |
+
+`dig +noall +answer` and `dig +short` both cut the output: the first keeps the full records (Name, TTL, Class, Type, Value), the second only the values. Without options `dig` prints everything (header, question, answer, statistics): try `dig gaia.cs.umass.edu` once to see it.
+
+Online: [how to use dig](https://jvns.ca/blog/2021/12/04/how-to-use-dig/) (a friendly guide) and the [dig manual](https://linux.die.net/man/1/dig) (or `man dig` in the terminal).
+
 ---
 
 ## 1. Who resolves names for my machine?
@@ -191,52 +210,62 @@ dns.google.
 ```
 Type **PTR**: address → name (reverse lookup). `8.8.8.8` is Google's public DNS server.
 
+### Command
+
+**What it does:** Asks for the text records of `unipa.it` (type TXT) and keeps only the SPF one.
+
+```bash
+dig +short TXT unipa.it | grep spf
+```
+**Expected output**
+```
+"v=spf1 include:_spf.google.com include:_spf.cineca.it include:spf.protection.outlook.com ip4:147.163.149.30 ip4:147.163.149.32 ip4:147.163.149.91 ip4:147.163.149.107 ip4:147.163.149.117 ip4:147.163.149.119 ip4:147.163.149.127 ip4:147.163.149.129 -all"
+```
+Type **TXT**: free text. This one is **SPF** (Sender Policy Framework): the list of mail servers allowed to send e-mail as `@unipa.it` (Google, Cineca, Outlook and some university addresses). `-all` = reject every other server. This is how a mail server can catch the fake sender of the SMTP lab (`03_SMTP`, Step 8).
+
 ---
 
 ## 5. Caching
 
-> The local DNS server remembers the answers for TTL seconds, so it does not have to ask again.
+> The **local DNS server** remembers every answer for TTL seconds: if someone asks the same name again, it answers from its cache without asking anybody else.
 
-### Command (Linux)
-
-**What it does:** Empties the DNS cache of this machine, so the next question starts from scratch. It prints nothing.
-
-```bash
-sudo resolvectl flush-caches
-```
-
-### Command (macOS)
-
-**What it does:** The same on macOS: empties the DNS cache and restarts the system resolver. It prints nothing.
-
-```bash
-sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
-```
+`dig` asks the local DNS server directly (the `SERVER` line below: the home router, or the university DNS server in the lab). So here we observe **its** cache.
 
 ### Command
 
-**What it does:** Asks for the address and also prints how long the answer took (`+stats`).
+**What it does:** Asks for the address of `www.cs.umass.edu` and also prints how long the answer took (`+stats`).
 
 ```bash
-dig +noall +answer +stats gaia.cs.umass.edu
+dig +noall +answer +stats www.cs.umass.edu
 ```
 **Expected output**
 ```
-
+www.cs.umass.edu.	450	IN	A	128.119.240.9
+;; Query time: 124 msec
+;; SERVER: 192.168.1.1#53(192.168.1.1)
+...
 ```
+124 ms: the local DNS server did not know the name, so it had to ask the other DNS servers (root, `.edu`, `umass.edu`).
 
 ### Command (run it again after a few seconds)
 
 **What it does:** Exactly the same question, a second time.
 
 ```bash
-dig +noall +answer +stats gaia.cs.umass.edu
+dig +noall +answer +stats www.cs.umass.edu
 ```
 **Expected output**
 ```
-
+www.cs.umass.edu.	445	IN	A	128.119.240.9
+;; Query time: 8 msec
+;; SERVER: 192.168.1.1#53(192.168.1.1)
+...
 ```
-Compare the two outputs. The **TTL is lower** the second time: it is a countdown, the record is sitting in the cache. The **Query time** is close to 0 ms: the answer came from the cache, nobody was asked.
+Compare the two outputs:
+- the **Query time** drops to a few ms: the answer came from the cache, nobody else was asked;
+- the **TTL is lower** (450 → 445): it is a countdown. When it reaches 0 the record is deleted from the cache, and the next question goes out again.
+
+> In the lab, a classmate may have asked the same name a moment before you: then your **first** query is already fast. Try a name nobody asked, e.g. `www.math.umass.edu`.
 
 ---
 
