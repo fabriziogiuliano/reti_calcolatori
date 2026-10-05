@@ -1,3 +1,0 @@
-bytes scaricati: 10485760
-tempo: 9.354948 s
-throughput medio: 1120878 B/s

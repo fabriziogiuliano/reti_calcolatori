@@ -1,0 +1,99 @@
+---------------------------------------------------------------------------------------
+LAB 01 - INTRODUCTION TO WIRESHARK
+Ref. Kurose, "Computer Networking: A Top-Down Approach", Ch. 1 (sec. 1.2, 1.3, 1.4, 1.5,
+1.6 and the "Wireshark Labs" section)
+---------------------------------------------------------------------------------------
+
+OBJECTIVES
+- Find the network interfaces and the addressing of your own machine (sec. 1.2).
+- Measure, qualitatively, the end-to-end delays towards a remote destination with ping and
+  traceroute, telling apart propagation, transmission and queuing delay (sec. 1.4).
+- Capture from the command line (tcpdump), with no filter, ALL the traffic that flows
+  on the interface for a few seconds, to see what is really on the network cable
+  (top-down approach: first the real complexity, then the details protocol by
+  protocol in the next chapters).
+- Recognise the layered encapsulation in the capture: Ethernet frame, IP datagram,
+  TCP/UDP segment, application-layer message (sec. 1.5).
+- Reflect on the fact that the sniffer (tcpdump/Wireshark) is the same kind of tool
+  named as a threat to confidentiality in sec. 1.6: whoever has access to the shared
+  medium can read unencrypted traffic.
+- Measure the average throughput of a transfer (F bits / T seconds, sec. 1.4.4) and
+  check experimentally the bottleneck rule, throughput = min(Rs, Rc)
+  (sec. 1.4.4, Fig. 1.19/1.20), by putting an artificial limit on your own bandwidth
+  "tap" (Rc) and seeing the throughput drop to that limit.
+- Observe that, across the network, you pass through routers of different ISPs: the
+  Internet core is an interconnection of independent networks (sec. 1.3).
+
+STEPS
+1) 01_test_ipaddr.sh     -> finds the network interfaces and addresses of the machine.
+2) 02_test_ping.sh        -> measures the RTT towards a remote destination.
+3) 03_test_traceroute.sh  -> lists the routers on the path and the delay to each of them.
+4) 04_capture_tcpdump.sh  -> captures with tcpdump, no filter, all the traffic for 10
+                              seconds and writes capture_all.pcap (needs sudo, run it yourself;
+                              meanwhile browse as usual to generate varied traffic).
+5) Copy capture_all.pcap to your computer (e.g. scp) and open it with Wireshark.
+6) 05_test_throughput.sh          -> downloads a test file and measures the average throughput.
+7) 06_test_throughput_limited.sh  -> downloads a smaller file with a speed limit
+                                      set by curl (--limit-rate 1M) and measures the throughput.
+
+NOTE - WHAT YOU SEE IN THE OUTPUT OF ip addr (output_ipaddr.txt)
+For each interface the output shows several pieces of information, which you will meet again later:
+- Interface name (e.g. lo, enp1s0): "lo" is the loopback interface, which points to the
+  machine itself (127.0.0.1); the others are the real physical/virtual interfaces.
+- State flags (e.g. UP, BROADCAST, MULTICAST): whether the interface is active and
+  which kinds of sending it supports.
+- mtu: the maximum size of data the interface can send in a single packet; it will be
+  useful later, when we see how protocols size their messages.
+- link/ether: the MAC address of the interface, an identifier at the link layer
+  (sec. 1.5), used inside the local network.
+- inet: the assigned IPv4 address, followed by the mask (e.g. /16), an identifier
+  at the network layer (sec. 1.2).
+- inet6: the corresponding IPv6 address.
+- scope: who can see that address (host = only the machine itself, link =
+  only the local network, global = reachable from outside too).
+You don't need to understand every detail now: the point is to notice that one machine has
+several addresses, at different layers (MAC and IP), which you will meet again when analysing
+encapsulation in the Wireshark capture.
+
+GUIDING QUESTIONS (answer by looking at the capture in Wireshark)
+1. How many different protocols do you see in the "Protocol" column? List them (e.g. ARP,
+   DNS, TCP, UDP, TLS, mDNS...). Did you expect all this "background" traffic, generated
+   just by having the computer on and connected?
+2. Find a DNS request: which name is resolved and which IP address is returned?
+3. Find the start of a TCP connection (the very first packets of a flow, before any
+   application data is exchanged). How much time passes between the first packet and the
+   reply from the other end? What does this interval correspond to, according to sec. 1.4?
+4. Select any packet and look at the nested layers in the details pane
+   (Frame / Ethernet II / Internet Protocol / TCP or UDP / application protocol).
+   Match each layer to a layer of the Internet stack seen in sec. 1.5.
+5. How much traffic is readable in clear text and how much is encrypted (e.g. TLS)? Link
+   the answer to the discussion on sniffing in sec. 1.6: what could someone see if they
+   captured your traffic on a shared network?
+6. Compare the RTT estimated by ping (output_ping.txt) with the request/reply times you
+   see in Wireshark for some TCP exchanges. Are they consistent?
+7. In output_traceroute.txt pick 2-3 intermediate hops (not the first one, which is your
+   home/campus router) and look up their IP on a service like ipinfo.io or bgp.he.net:
+   which organisation/ISP does each one belong to? Does it change along the path? Link
+   the answer to the concept of "interconnection of ISPs" in sec. 1.3 (Fig. 1.15).
+8. In output_throughput.txt: what average throughput did you get? Is it close to the
+   nominal speed of your connection? With the measured time, compute F/T by hand
+   and check that it matches the value reported by curl (sec. 1.4.4).
+9. If you run 05_test_throughput.sh again on screen (no redirection), curl also shows a
+   table with "Average Speed (Dload)" and "Current Speed": the first is the average
+   throughput F/T, the second the instantaneous one at the last sample — the same
+   distinction made by the Kurose in sec. 1.4.4. Are they equal? Why not?
+10. Compare the average value with a manual estimate of F/T, obtained by dividing the
+    file size by "Time Total": does the result match "Average Speed"?
+    If there is a gap, what can cause it (DNS lookup, opening the connection
+    before the real data transfer starts, included in the total time but not in the
+    "pure" transfer throughput)?
+11. Compare output_throughput.txt (no limit) with output_throughput_limited.txt
+    (with --limit-rate 1M): how much does the average throughput drop? Does it get close
+    to 1 MB/s (the imposed limit) or to the real speed of your connection?
+12. In the Kurose model (Fig. 1.19, sec. 1.4.4) the end-to-end throughput is
+    min(Rs, Rc), where Rs is the server rate and Rc the client rate. In the limited
+    test, who is playing the role of the bottleneck link?
+    Repeat the same comparison by capturing the traffic with 04_capture_tcpdump.sh while
+    06_test_throughput_limited.sh is running: in Wireshark, do the TCP packets arrive at
+    regular intervals or "in bursts"? What would you expect with a narrow tap compared to
+    a wide-open one?
