@@ -10,6 +10,9 @@ DELAY = 2   # seconds
 WWW = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'www')
 
 class Handler(SimpleHTTPRequestHandler):
+    # The base do_GET sends status line + headers, then calls copyfile() only if
+    # there is a file to send (200). 304 and 404 have no file: no copyfile, no delay.
+    # Simplification: fixed delay, not proportional to the file size.
     def copyfile(self, source, outputfile):   # called only when the file is sent
         time.sleep(DELAY)                     # emulate a far-away server
         super().copyfile(source, outputfile)
