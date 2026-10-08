@@ -123,6 +123,8 @@ TUNNEL  www.unipa.it:443   (encrypted: cannot cache)
 ```
 With https the client does not send `GET`, it sends `CONNECT www.unipa.it:443`: "open a tunnel to this server". The proxy then only copies encrypted bytes in both directions. It does not see the page, so it cannot keep a copy. Run it again: always `TUNNEL`, never `HIT`.
 
+> **How** TLS encrypts the bytes is a topic of the security chapter: Kurose & Ross, Ch. 8 (Sec. 8.6). Here only the effect matters: the proxy cannot read them.
+
 ### Step 8. The browser through the proxy
 
 In the browser (or system) network settings, set a **manual proxy**: `localhost`, port `8080`, for **both HTTP and HTTPS**. Browse normally for a minute and watch the proxy log. Which sites appear? Which lines are `HIT`/`MISS`, which are `TUNNEL`?
