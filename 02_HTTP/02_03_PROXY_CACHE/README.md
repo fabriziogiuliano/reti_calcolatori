@@ -18,7 +18,7 @@ Reference: Kurose & Ross, *Computer Networking*, Ch. 2 (Sec. 2.2.5)
 | `origin_server.py` | A web site, port **8000**: serves the files in `www/`. Every answer takes **2 seconds**: an artificial delay (`time.sleep`) that stands for a server far away |
 | `proxy_cache.py` | The proxy, port **8080** |
 | `proxy_cache_AGE.py` | The same proxy, but a copy is thrown away after `MAX_AGE` seconds (Step 10) |
-| `proxy_cache_AGE_FIX.py` | The same proxy, but an old copy is checked with the origin (conditional GET, Step 11) |
+| `proxy_cache_CONDITIONAL_GET.py` | The same proxy, but an old copy is checked with the origin (conditional GET, Step 11) |
 | `www/` | The files of the site: `index.html` and `kiwi.gif` |
 
 ```
@@ -194,7 +194,7 @@ An old copy now lives at most 30 s. But the proxy still does **not know** whethe
 
 ### Step 11. Ask the origin: "has it changed?"
 
-**What it does:** `proxy_cache_AGE_FIX.py` is `proxy_cache_AGE.py` with one change: a copy older than 30 s is **not** thrown away. The proxy sends a **conditional GET** to the origin:
+**What it does:** `proxy_cache_CONDITIONAL_GET.py` is `proxy_cache_AGE.py` with one change: a copy older than 30 s is **not** thrown away. The proxy sends a **conditional GET** to the origin:
 ```
 GET /index.html HTTP/1.1
 If-Modified-Since: Thu, 08 Oct 2026 10:24:46 GMT
@@ -203,7 +203,7 @@ The date is the `Last-Modified` header that the origin sent together with the co
 - `304 Not Modified`, **without body**: the copy is still good. The proxy keeps it and its age starts again from 0 (`REVALIDATED`).
 - `200 OK` with the new page: the page changed. The proxy keeps the new copy (`MISS`).
 
-Stop `proxy_cache_AGE.py` and start `proxy_cache_AGE_FIX.py`. Put `Version 1` back in `www/index.html`.
+Stop `proxy_cache_AGE.py` and start `proxy_cache_CONDITIONAL_GET.py`. Put `Version 1` back in `www/index.html`.
 
 1. Ask for the page (the same command, with the time):
    ```bash
