@@ -25,7 +25,7 @@ SIZES = {                              # object -> seconds to send it
 }
 ```
 
-What is hypercorn? Python's `http.server`, used in the other folders, speaks only HTTP/1.x. Hypercorn is a Python web server that speaks HTTP/1.1 and HTTP/2: `server.py` uses it to answer in both versions. We use it as a black box, there is no need to know how it works inside. Online: [hypercorn documentation](https://hypercorn.readthedocs.io/). It is installed by `setup_env.sh` (`requirements.txt`).
+What is hypercorn? Python's `http.server`, used in the other folders, speaks only HTTP/1.x. Hypercorn is a Python web server that speaks HTTP/1.1 and HTTP/2: `server.py` uses it to answer in both versions. We use it as a black box, there is no need to know how it works inside. Online: [hypercorn documentation](https://hypercorn.readthedocs.io/). It is installed with the course environment ([00_PYTHON_ENVIRONMENT_SETUP](../../00_PYTHON_ENVIRONMENT_SETUP/)).
 
 ## Setup
 

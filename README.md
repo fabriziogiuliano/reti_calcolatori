@@ -2,10 +2,11 @@
 
 Lab material for *Computer Networking* (Kurose & Ross). Each folder has a README.md with the steps; EXERCISES/ holds the exercise for students.
 
-Setup: run `setup_env.sh` once (it creates the conda env `reti_calcolatori`, Python 3.11).
+Setup: before the first lab, follow [00_PYTHON_ENVIRONMENT_SETUP](00_PYTHON_ENVIRONMENT_SETUP/) to install conda and create the environment `reti_calcolatori` (Python 3.11).
 
 | Folder | Topic | Exercise |
 |---|---|---|
+| [00_PYTHON_ENVIRONMENT_SETUP](00_PYTHON_ENVIRONMENT_SETUP/) | conda, the `reti_calcolatori` environment | – |
 | [01_INTRO_WIRESHARK](01_INTRO_WIRESHARK/) | ip addr, ping | – |
 | [01b_THROUGHPUT_IPERF](01b_THROUGHPUT_IPERF/) | throughput with iperf | – |
 | [02_HTTP/02_00_CURL](02_HTTP/02_00_CURL/) | curl options | status codes |

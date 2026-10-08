@@ -18,7 +18,7 @@ Reference: Kurose & Ross, *Computer Networking*, Ch. 2 (Sec. 2.3, Electronic Mai
 | `smtp_client.py` | A mail client in Python: it sends one mail and shows every command and reply |
 | `mail.txt` | A ready mail, used with curl |
 
-Our server uses the library aiosmtpd ([documentation](https://aiosmtpd.aio-libs.org/)), installed by `setup_env.sh`. We use it as a black box.
+Our server uses the library aiosmtpd ([documentation](https://aiosmtpd.aio-libs.org/)), installed with the course environment ([00_PYTHON_ENVIRONMENT_SETUP](../00_PYTHON_ENVIRONMENT_SETUP/)). We use it as a black box.
 
 Use two tmux panes: the server on the left, the client on the right. Start `smtp_server.py` in the left pane. It prints:
 ```
