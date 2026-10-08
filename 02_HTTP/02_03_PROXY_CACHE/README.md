@@ -206,8 +206,6 @@ curl -s -D - -o /dev/null -w 'time: %{time_total}s\n' -x <TEACHER_IP>:8080 http:
 
 The more users share the proxy, the higher the hit rate.
 
-*Note:* the teacher's firewall must accept incoming connections on ports 8000 and 8080 (on macOS, answer "Allow" when asked for Python). *Without a shared network:* run the command from several tmux panes, each pane playing a different user.
-
 ---
 
 ## Solutions
