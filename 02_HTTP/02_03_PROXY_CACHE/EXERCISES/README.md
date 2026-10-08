@@ -5,7 +5,7 @@
 ## Task
 
 1. Create a file `hello.txt` in the `www/` folder, with one line of text.
-2. With the origin server and the proxy running, download `http://localhost:8000/hello.txt` **through the proxy**, twice.
+2. With the origin server and the proxy running, download `http://localhost:8000/hello.txt` through the proxy, twice.
 3. Which download is `MISS`, which is `HIT`? How long does each one take?
 
 ## What you need
@@ -15,7 +15,7 @@
 
 ## Check
 
-The first time `MISS` (about 2 s), the second time `HIT` (a few ms). The origin server log shows **one** request for `/hello.txt`.
+The first time `MISS` (about 2 s), the second time `HIT` (a few ms). The origin server log shows one request for `/hello.txt`.
 
 <details>
 <summary>Solution</summary>

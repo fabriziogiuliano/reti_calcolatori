@@ -5,8 +5,8 @@
 ## Task
 
 Choose a domain (for example `gmail.com`) and find:
-1. its **mail servers**: which one is tried first?
-2. its **authoritative name servers**: how many are there?
+1. its mail servers: which one is tried first?
+2. its authoritative name servers: how many are there?
 
 ## What you need
 
@@ -36,6 +36,6 @@ ns2.google.com.
 ns4.google.com.
 ns3.google.com.
 ```
-1. Five mail servers: the first one tried is `gmail-smtp-in.l.google.com`, the one with the **lowest** number (5). The others are backups.
+1. Five mail servers: the first one tried is `gmail-smtp-in.l.google.com`, the one with the lowest number (5). The others are backups.
 2. Four name servers: if one fails, the others answer.
 </details>

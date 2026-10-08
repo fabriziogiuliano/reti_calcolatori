@@ -5,8 +5,8 @@
 ## Task
 
 1. In `redirect_server.py`, add two paths to the `ROUTES` dictionary:
-   - `/x` answers **301** and sends to `/y`;
-   - `/y` answers **302** and sends to `/c`.
+   - `/x` answers 301 and sends to `/y`;
+   - `/y` answers 302 and sends to `/c`.
 2. Restart the server.
 3. Follow the chain from `/x` with curl.
 

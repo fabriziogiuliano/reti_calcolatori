@@ -4,14 +4,14 @@
 
 ## Task
 
-1. In `server.py`, change the RTT from 0.5 s to **1 s**.
-2. **Before running anything**, write down: with 3 objects, how long does each object take, with HTTP/1.0 and with HTTP/1.1? And in total?
+1. In `server.py`, change the RTT from 0.5 s to 1 s.
+2. Before running anything, write down: with 3 objects, how long does each object take, with HTTP/1.0 and with HTTP/1.1? And in total?
 3. Restart the server and measure with the commands of the README (Steps 2 and 3).
 
 ## What you need
 
 - The variable `RTT` at the top of `server.py`.
-- The formulas in the Concepts of the README: non-persistent **N × 2 RTT**, persistent **2 RTT + (N − 1) × 1 RTT**.
+- The formulas in the Concepts of the README: non-persistent N × 2 RTT, persistent 2 RTT + (N − 1) × 1 RTT.
 - The commands of Steps 2 and 3 (`--http1.0` and `--http1.1`, `[1-3]`).
 
 ## Check
@@ -24,7 +24,7 @@ Your prediction and the measure agree. At the end, put `RTT = 0.5` back.
 ```python
 RTT = 1
 ```
-Prediction: non-persistent 2 s + 2 s + 2 s = **6 s**; persistent 2 s + 1 s + 1 s = **4 s**.
+Prediction: non-persistent 2 s + 2 s + 2 s = 6 s; persistent 2 s + 1 s + 1 s = 4 s.
 
 Measure:
 ```bash

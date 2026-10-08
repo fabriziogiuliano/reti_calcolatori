@@ -4,7 +4,7 @@
 
 ## Task
 
-1. In `cart_server.py`, make the customer numbers start from **1000** instead of 1678.
+1. In `cart_server.py`, make the customer numbers start from 1000 instead of 1678.
 2. Restart the server and repeat Step 1 of the README.
 3. Which number does the server give you in `Set-Cookie`?
 
@@ -31,5 +31,5 @@ The interesting lines:
 Set-Cookie: id=1000
 Customer 1000. Your cart: ['book']
 ```
-The value of the cookie is decided **by the server**: the client only keeps it and sends it back.
+The value of the cookie is decided by the server: the client only keeps it and sends it back.
 </details>

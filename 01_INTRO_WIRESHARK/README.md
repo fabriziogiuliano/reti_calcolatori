@@ -4,14 +4,14 @@ Reference: Kurose & Ross, *Computer Networking*, Ch. 1 (Sec. 1.2, 1.4)
 
 ## Concepts
 
-1. A machine has **several addresses**, at different layers: **MAC** (link layer) and **IP** (network layer).
-2. **RTT** (round-trip time) = time for a packet to go to a host and come back. It includes propagation, transmission and queuing delay.
+1. A machine has several addresses, at different layers: MAC (link layer) and IP (network layer).
+2. The RTT (round-trip time) is the time a packet takes to go to a host and come back. It includes propagation, transmission and queuing delay.
 
 ---
 
 ## Step 1. Interfaces and addresses
 
-**What it does:** `ip addr` lists the network interfaces and their addresses ([man page](https://man7.org/linux/man-pages/man8/ip-address.8.html)). `ifconfig` is the old command, no longer installed by default.
+`ip addr` lists the network interfaces and their addresses ([man page](https://man7.org/linux/man-pages/man8/ip-address.8.html)). `ifconfig` is the old command, no longer installed by default.
 
 ```bash
 ip addr
@@ -30,17 +30,17 @@ ip addr
 
 | Field | Meaning |
 |---|---|
-| `lo`, `enp1s0` | Interface name. `lo` = loopback, the machine itself (127.0.0.1) |
+| `lo`, `enp1s0` | Interface name. `lo` is the loopback, the machine itself (127.0.0.1) |
 | `UP`, `BROADCAST`, `MULTICAST` | The interface is active, and which kinds of sending it supports |
 | `mtu` | Max data size in one packet |
-| `link/ether` | **MAC** address (link layer) |
-| `inet` | **IPv4** address + mask (e.g. `/16`) |
-| `inet6` | **IPv6** address |
-| `scope` | Who sees the address: `host` = this machine, `link` = local network, `global` = everyone |
+| `link/ether` | MAC address (link layer) |
+| `inet` | IPv4 address and mask (e.g. `/16`) |
+| `inet6` | IPv6 address |
+| `scope` | Who sees the address: `host` this machine only, `link` the local network, `global` everyone |
 
 ## Step 2. RTT with ping
 
-**What it does:** `ping` sends small packets to a host and measures the RTT of each one ([man page](https://man7.org/linux/man-pages/man8/ping.8.html)). `-c 5` = send 5 packets, then stop.
+`ping` sends small packets to a host and measures the RTT of each one ([man page](https://man7.org/linux/man-pages/man8/ping.8.html)). `-c 5` sends 5 packets, then stops.
 
 ```bash
 ping -c 5 google.com

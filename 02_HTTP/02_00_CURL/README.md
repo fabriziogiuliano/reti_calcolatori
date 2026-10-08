@@ -1,10 +1,10 @@
 # 02.0 curl: an HTTP client in the terminal
 
-**curl** is a program that talks HTTP (and many other protocols) from the command line. Think of it as a **browser without graphics**: it sends a request, receives the response, and shows you **everything**, including what a browser hides.
+curl is a program that talks HTTP (and many other protocols) from the command line. It works like a browser without graphics: it sends a request, receives the response, and shows you all of it, including what a browser hides.
 
-**Why curl?** It is a professional tool, open source since 1998 and already installed on macOS, Windows and Linux. Developers use it every day to test web APIs, system administrators to check sites and servers, and its library (libcurl) runs inside phones, cars and countless programs. Browsers can even turn any request into a curl command: in the developer tools, *Network* tab, right click on a request → **Copy as cURL** ([how it works](https://everything.curl.dev/cmdline/copyas.html)). More on the project: [curl.se](https://curl.se/).
+Why curl? It is a professional tool, open source since 1998 and already installed on macOS, Windows and Linux. Developers use it every day to test web APIs, system administrators to check sites and servers, and its library (libcurl) runs inside phones, cars and countless programs. Browsers can even turn any request into a curl command: in the developer tools, *Network* tab, right click on a request, then *Copy as cURL* ([how it works](https://everything.curl.dev/cmdline/copyas.html)). More on the project: [curl.se](https://curl.se/).
 
-We start from the simplest command and add **one option at a time**. At the end you will know every option used in the lab folders (`02_01` → `02_06`).
+We start from the simplest command and add one option at a time. At the end you will know every option used in the lab folders, from `02_01` to `02_06`.
 
 - Friendly guide with examples: [everything curl](https://everything.curl.dev/)
 - All the options: [official curl manual](https://curl.se/docs/manpage.html) (or `man curl` in the terminal)
@@ -24,7 +24,7 @@ curl http://example.com
 ```
 <!doctype html><html lang=en><head><meta charset=utf-8>...<title>Example Domain</title>...
 ```
-curl sends a `GET` request and prints the **body** of the response: the HTML a browser would draw.
+curl sends a `GET` request and prints the body of the response, the HTML a browser would draw.
 
 ### Step 2. `-i`: headers and body
 
@@ -42,7 +42,7 @@ Server: cloudflare
 
 <!doctype html><html lang=en>...
 ```
-`-i` (*include*) prints the **status line** and the **headers** of the response before the body.
+`-i` (*include*) prints the status line and the headers of the response before the body.
 
 ### Step 3. `-I`: only the headers
 
@@ -58,7 +58,7 @@ Connection: keep-alive
 Server: cloudflare
 ...
 ```
-`-I` sends a **`HEAD`** request instead of `GET`: the server answers with the headers only, no body.
+`-I` sends a `HEAD` request instead of `GET`, and the server answers with the headers only.
 
 ### Step 4. `-v`: the whole conversation
 
@@ -80,13 +80,13 @@ curl -v http://example.com
 < Content-Type: text/html; charset=utf-8
 ...
 ```
-`-v` (*verbose*) shows everything. Learn to read the first character of each line:
+`-v` (*verbose*) shows the whole exchange. The first character of each line tells what the line is:
 
 | Line starts with | Meaning |
 |---|---|
 | `*` | what curl is doing (DNS, TCP connection, TLS...) |
-| `>` | what the client **sends** (the request) |
-| `<` | what the client **receives** (the response headers) |
+| `>` | what the client sends (the request) |
+| `<` | what the client receives (the response headers) |
 
 ---
 
@@ -94,7 +94,7 @@ curl -v http://example.com
 
 ### Step 5. `-s`: silent
 
-When the output goes to a pipe (`|`) or a file, curl shows a **progress bar**:
+When the output goes to a pipe (`|`) or a file, curl shows a progress bar:
 ```bash
 curl http://example.com | head -c 50
 ```
@@ -111,9 +111,9 @@ curl -s http://example.com | head -c 50
 ```
 <!doctype html><html lang=en><head><meta charset=u
 ```
-`-S` (*show error*), used together with `-s`, still prints the **errors**.
+`-S` (*show error*), used together with `-s`, still prints the errors.
 
-> **Short options can be joined:** `-sv` = `-s -v`, `-sIL` = `-s -I -L`, `-sSL` = `-s -S -L`. In the lab folders you will find `-s` almost always joined to other options: every time the output goes to a pipe (`|`) or `-w` prints something, `-s` keeps the progress bar out of the way.
+> Short options can be joined: `-sv` is `-s -v`, `-sIL` is `-s -I -L`, `-sSL` is `-s -S -L`. In the lab folders `-s` is almost always joined to other options: whenever the output goes to a pipe (`|`) or `-w` prints something, it keeps the progress bar out of the way.
 
 ### Step 6. `-o`: where the body goes
 
@@ -124,11 +124,11 @@ ls -l page.html
 ```
 -rw-r--r--  1 fabrizio  wheel  577 Oct  2 23:08 page.html
 ```
-`-o file` (*output*) saves the body in a file. `-o /dev/null` **throws it away**: useful when we care only about headers or times.
+`-o file` (*output*) saves the body in a file. `-o /dev/null` throws it away, which is useful when we only care about headers or times.
 
 ### Step 7. `2>&1 | grep`: keep only some lines of `-v`
 
-`-v` writes on the **error channel** (stderr), not on the normal output. `2>&1` sends it to the normal output, so that `grep` can filter it:
+`-v` writes on the error channel (stderr), not on the normal output. `2>&1` sends it to the normal output, so that `grep` can filter it:
 ```bash
 curl -sv -o /dev/null http://example.com 2>&1 | grep -E '^> GET|^< HTTP'
 ```
@@ -137,7 +137,7 @@ curl -sv -o /dev/null http://example.com 2>&1 | grep -E '^> GET|^< HTTP'
 > GET / HTTP/1.1
 < HTTP/1.1 200 OK
 ```
-Only the request line and the status line. `grep -E 'A|B'` keeps the lines that match A **or** B; `-i` ignores upper/lower case.
+Only the request line and the status line are left. `grep -E 'A|B'` keeps the lines that match A or B, and `-i` ignores upper/lower case.
 
 ### Step 8. `-w`: print what you want
 
@@ -148,16 +148,16 @@ curl -s -o /dev/null -w 'code: %{http_code}  time: %{time_total}s\n' http://exam
 ```
 code: 200  time: 0.068087s
 ```
-`-w` (*write-out*) prints a text **after** the transfer. The parts `%{...}` are **curl variables**, filled in by curl. The most useful:
+`-w` (*write-out*) prints a text after the transfer. The parts `%{...}` are curl variables, filled in by curl. The most useful ones:
 
 | Variable | Meaning |
 |---|---|
 | `%{http_code}` | the status code (200, 404...) |
 | `%{time_total}` | seconds for the whole transfer |
 | `%{url_effective}` | the URL actually requested |
-| `%{local_port}` | the **client port**: same port = same TCP connection |
-| `%{num_connects}` | `1` = a new connection was opened, `0` = an old one was reused |
-| `%{http_version}` | the HTTP version of the **response** |
+| `%{local_port}` | the client port: the same port means the same TCP connection |
+| `%{num_connects}` | `1` if a new connection was opened, `0` if an old one was reused |
+| `%{http_version}` | the HTTP version of the response |
 
 Full list: [write-out in everything curl](https://everything.curl.dev/usingcurl/verbose/writeout.html).
 
@@ -190,7 +190,7 @@ HTTP/1.1 301 Moved Permanently
 Location: http://www.google.com/
 Content-Type: text/html; charset=UTF-8
 ```
-Without options curl **does not follow** the redirect: it shows the `301` and stops. With `-L` (*location*) it follows every `Location`:
+Without options curl does not follow the redirect: it shows the `301` and stops. With `-L` (*location*) it follows every `Location`:
 ```bash
 curl -sIL http://google.com | grep -iE '^(HTTP|location)'
 ```
@@ -210,7 +210,7 @@ curl -sI https://www.unipa.it | grep -i '^set-cookie'
 ```
 Set-Cookie: JSESSIONID=8A1115B36DBCED5DA3541C8FF5FA0584; Path=/; HttpOnly
 ```
-`-c file` (*cookie jar*) **saves** the cookies received; `-b file` **sends** them back. `-b 'name=value'` sends a cookie written by hand:
+`-c file` (*cookie jar*) saves the cookies received, `-b file` sends them back. `-b 'name=value'` sends a cookie written by hand:
 ```bash
 curl -s -o /dev/null -c cookies.txt https://www.unipa.it
 curl -sv -o /dev/null -b cookies.txt https://www.unipa.it 2>&1 | grep -i '^> cookie'
@@ -225,7 +225,7 @@ The second request carries the cookie saved by the first one, as a browser does.
 ```bash
 curl -x localhost:8080 http://example.com
 ```
-`-x host:port` sends the request to a **proxy** instead of directly to the site. It needs a proxy running on that port: we build one in `02_03_PROXY_CACHE`.
+`-x host:port` sends the request to a proxy instead of directly to the site. It needs a proxy running on that port: we build one in `02_03_PROXY_CACHE`.
 
 ---
 
@@ -263,7 +263,7 @@ port 59639  new conn: 1
 port 59639  new conn: 0
 port 59639  new conn: 0
 ```
-Same client port, and `new conn: 0` after the first: curl **reused** the same TCP connection for the 3 requests.
+The client port is the same, and `new conn: 0` after the first: curl reused the same TCP connection for the 3 requests.
 
 ### Step 15. Choose the HTTP version
 
@@ -283,7 +283,7 @@ curl --http2   -sv -o /dev/null https://example.com 2>&1 | grep -E '^> GET|^< HT
 > GET / HTTP/2
 < HTTP/2 200
 ```
-The option sets the version of the **request** (`>` line). With `--http1.0` the server still answers `HTTP/1.1`: this is allowed, the server tells which version it supports.
+The option sets the version of the request (the `>` line). With `--http1.0` the server still answers `HTTP/1.1`, which is allowed: the server tells which version it supports.
 
 ### Step 16. `--parallel`: all the requests at the same time
 
@@ -296,7 +296,7 @@ port 59644  new conn: 1
 port 59645  new conn: 1
 port 59643  new conn: 1
 ```
-Without `--parallel` curl sends one request after the other (Step 14). With `--parallel` it sends them **at the same time**: with HTTP/1.1 it needs **3 connections** (3 ports). ([parallel transfers](https://everything.curl.dev/cmdline/urls/parallel.html))
+Without `--parallel` curl sends one request after the other (Step 14). With `--parallel` it sends them at the same time, and with HTTP/1.1 that needs 3 connections (3 ports). ([parallel transfers](https://everything.curl.dev/cmdline/urls/parallel.html))
 
 ### Step 17. Total time of a command
 
@@ -309,7 +309,7 @@ real 0.11
 user 0.01
 sys 0.00
 ```
-`/usr/bin/time -p` is not part of curl: it measures any command. `real` = total time in seconds.
+`/usr/bin/time -p` is not part of curl: it measures any command. `real` is the total time in seconds.
 
 ---
 

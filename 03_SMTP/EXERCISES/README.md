@@ -4,8 +4,8 @@
 
 ## Task
 
-1. In `smtp_client.py`, send the mail to **Carol** (`carol@example.com`) instead of Bob, with the subject **"Exam tomorrow"**.
-2. Run the client and look at the server log: is Carol in the **envelope** and in the **letter**?
+1. In `smtp_client.py`, send the mail to Carol (`carol@example.com`) instead of Bob, with the subject "Exam tomorrow".
+2. Run the client and look at the server log: is Carol in the envelope and in the letter?
 
 ## What you need
 
@@ -19,7 +19,7 @@ The server log shows `RCPT TO: carol@example.com` and `To: Carol <carol@example.
 <details>
 <summary>Solution</summary>
 
-The receiver is written in **two places**: change both.
+The receiver is written in two places: change both.
 ```python
 To: Carol <carol@example.com>              # the letter (header line)
 Subject: Exam tomorrow

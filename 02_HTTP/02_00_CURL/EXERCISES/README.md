@@ -1,10 +1,10 @@
 # Exercise 02.0: status codes with curl
 
-**Goal:** get only the **status code** of a page, with one curl command.
+**Goal:** get only the status code of a page, with one curl command.
 
 ## Task
 
-Write a curl command that prints **only the status code** (for example `200`) of a page. Run it for these 3 pages:
+Write a curl command that prints only the status code (for example `200`) of a page. Run it for these 3 pages:
 
 1. `http://example.com`
 2. `http://google.com`
