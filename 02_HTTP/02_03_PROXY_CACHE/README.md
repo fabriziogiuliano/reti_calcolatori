@@ -15,7 +15,7 @@ Reference: Kurose & Ross, *Computer Networking*, Ch. 2 (Sec. 2.2.5)
 
 | File | What it is |
 |---|---|
-| `origin_server.py` | A web site, port **8000**: serves the files in `www/`. Every answer takes **2 seconds**: an artificial delay (`time.sleep`) that stands for a server far away |
+| `origin_server.py` | A web site, port **8000**: serves the files in `www/`. Sending a file takes **2 seconds**: an artificial delay (`time.sleep`) that stands for a server far away, on a slow link. An answer without a file (e.g. `304`) arrives at once |
 | `proxy_cache.py` | The proxy, port **8080** |
 | `proxy_cache_AGE.py` | The same proxy, but a copy is thrown away after `MAX_AGE` seconds (Step 10) |
 | `proxy_cache_CONDITIONAL_GET.py` | The same proxy, but an old copy is checked with the origin (conditional GET, Step 11) |
@@ -218,7 +218,7 @@ Stop `proxy_cache_AGE.py` and start `proxy_cache_CONDITIONAL_GET.py`. Put `Versi
    ```
    X-Cache: REVALIDATED
    <p>Version 1</p>
-   time: 2.011099s
+   time: 0.003141s
    ```
 3. Change `Version 1` into `Version 2`, save, wait more than 30 s, ask again:
    ```
@@ -232,7 +232,7 @@ Stop `proxy_cache_AGE.py` and start `proxy_cache_CONDITIONAL_GET.py`. Put `Versi
 "GET /index.html HTTP/1.1" 304 -
 "GET /index.html HTTP/1.1" 200 -
 ```
-Now the proxy **knows**. But look at the time of `REVALIDATED`: 2 s, like a `MISS`. The body did not travel again, but the question still costs a trip to the origin. This is why real caches do both: a young copy is used at once (`HIT`), an old copy is checked with a conditional GET.
+Now the proxy **knows**. Look at the time of `REVALIDATED`: a few ms, not 2 s. The question travels to the origin, but the file does not travel back: the slow part is skipped. The file is downloaded again only when it really changed.
 
 ---
 
