@@ -1,14 +1,15 @@
-# A caching PROXY for the local network: the browsers send ALL their requests here.
+# proxy_cache.py + one rule: a copy is good only for MAX_AGE seconds, then it is thrown away.
 #   http  -> GET: HIT = answer from the cache, MISS = ask the origin, keep a copy, answer
 #   https -> CONNECT: just a tunnel of encrypted bytes, nothing can be cached
 import select
 import socket
+import time
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-import time
 
-cache = {}                  # url -> (content type, body)
+MAX_AGE = 30                # seconds: an older copy is thrown away
+cache = {}                  # url -> (content type, body, time of the copy)
 hits = misses = 0
 direct = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # we never use a proxy ourselves
 
@@ -16,20 +17,14 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):                     # http: "GET http://host/path HTTP/1.1"
         global hits, misses
         url = self.path                   # the client sends the FULL url to a proxy
-        MAX_AGE=2*60 #2 minutes
-        if url in cache:
-            t_now = time.time()
-            t_age = t_now - cache[url][2]
-            if t_age > MAX_AGE:
-                print("remove url, AGE EXPIRED")
-                cache.pop(url)
+
+        if url in cache and time.time() - cache[url][2] > MAX_AGE:
+            print(f'EXPIRED {url}')
+            del cache[url]                # too old: throw it away
 
         if url in cache:
             hits += 1
-            
-            t_now = time.time()
-            t_age = t_now - cache[url][2]
-            result = f"HIT"
+            result = 'HIT'
         else:
             misses += 1
             result = 'MISS'
@@ -42,12 +37,14 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_error(code)
                 return
 
-        print(f'{result:6}  {url}   (hits={hits}, misses={misses})')
-        content_type, body, t_cache = cache[url]
+        content_type, body, t_copy = cache[url]
+        age = int(time.time() - t_copy)
+        print(f'{result:6}  {url}   (age={age}s, hits={hits}, misses={misses})')
         self.send_response(200)
         self.send_header('Content-Type', content_type)
         self.send_header('Content-Length', len(body))
         self.send_header('X-Cache', result)
+        self.send_header('Age', age)      # how many seconds old the copy is
         self.end_headers()
         self.wfile.write(body)
 
@@ -70,5 +67,5 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):         # hide the default log: we print our own lines
         pass
 
-print('Proxy cache on http://localhost:8080 ...')
+print(f'Proxy cache on http://localhost:8080 (max age {MAX_AGE} s) ...')
 ThreadingHTTPServer(('', 8080), Handler).serve_forever()

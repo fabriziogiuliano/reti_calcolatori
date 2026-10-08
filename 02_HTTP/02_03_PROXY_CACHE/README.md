@@ -9,7 +9,7 @@ Reference: Kurose & Ross, *Computer Networking*, Ch. 2 (Sec. 2.2.5)
 3. The proxy is **both a server and a client**: a server for the browsers, a client for the origin servers.
 4. Why it helps: **shorter response time** and **less traffic** on the access link.
 5. With **https** the proxy only passes encrypted bytes: it **cannot cache**.
-6. A copy in the cache can become **old**: the proxy does not know that the object changed.
+6. A copy in the cache can become **old**: the proxy does not know that the object changed. Two fixes: give every copy a **maximum age**, or **ask the origin** whether the object changed (**conditional GET**).
 
 ## Files
 
@@ -17,6 +17,8 @@ Reference: Kurose & Ross, *Computer Networking*, Ch. 2 (Sec. 2.2.5)
 |---|---|
 | `origin_server.py` | A web site, port **8000**: serves the files in `www/`. Every answer takes **2 seconds**: an artificial delay (`time.sleep`) that stands for a server far away |
 | `proxy_cache.py` | The proxy, port **8080** |
+| `proxy_cache_AGE.py` | The same proxy, but a copy is thrown away after `MAX_AGE` seconds (Step 10) |
+| `proxy_cache_AGE_FIX.py` | The same proxy, but an old copy is checked with the origin (conditional GET, Step 11) |
 | `www/` | The files of the site: `index.html` and `kiwi.gif` |
 
 ```
@@ -153,6 +155,85 @@ Remove the proxy setting at the end.
    ```
 The proxy keeps serving the **old copy**: once an object is in the cache, it never asks the origin again.
 
+### Step 10. Copies that expire
+
+**What it does:** `proxy_cache_AGE.py` is `proxy_cache.py` plus one rule: a copy is good for `MAX_AGE` = **30 seconds**, then it is thrown away and the next request is a `MISS`. Every answer carries the `Age` header: how many seconds old the copy is.
+
+Stop `proxy_cache.py` (`Ctrl+c`) and start `proxy_cache_AGE.py` in its pane. Put `Version 1` back in `www/index.html`.
+
+1. Ask for the page:
+   ```bash
+   curl -s -D - -x localhost:8080 http://localhost:8000/index.html | grep -E '^(X-Cache|Age)|Version'
+   ```
+   ```
+   X-Cache: MISS
+   Age: 0
+   <p>Version 1</p>
+   ```
+2. Change `Version 1` into `Version 2`, save, and ask again **at once**:
+   ```
+   X-Cache: HIT
+   Age: 9
+   <p>Version 1</p>
+   ```
+   The copy is still young: the old page again.
+3. Wait until the copy is older than 30 s and ask again:
+   ```
+   X-Cache: MISS
+   Age: 0
+   <p>Version 2</p>
+   ```
+**Proxy log:**
+```
+MISS    http://localhost:8000/index.html   (age=0s, hits=0, misses=1)
+HIT     http://localhost:8000/index.html   (age=9s, hits=1, misses=1)
+EXPIRED http://localhost:8000/index.html
+MISS    http://localhost:8000/index.html   (age=0s, hits=1, misses=2)
+```
+An old copy now lives at most 30 s. But the proxy still does **not know** whether the page changed: it guesses. It throws the copy away and downloads the page again even when nothing changed.
+
+### Step 11. Ask the origin: "has it changed?"
+
+**What it does:** `proxy_cache_AGE_FIX.py` is `proxy_cache_AGE.py` with one change: a copy older than 30 s is **not** thrown away. The proxy sends a **conditional GET** to the origin:
+```
+GET /index.html HTTP/1.1
+If-Modified-Since: Thu, 08 Oct 2026 10:24:46 GMT
+```
+The date is the `Last-Modified` header that the origin sent together with the copy. The origin answers:
+- `304 Not Modified`, **without body**: the copy is still good. The proxy keeps it and its age starts again from 0 (`REVALIDATED`).
+- `200 OK` with the new page: the page changed. The proxy keeps the new copy (`MISS`).
+
+Stop `proxy_cache_AGE.py` and start `proxy_cache_AGE_FIX.py`. Put `Version 1` back in `www/index.html`.
+
+1. Ask for the page (the same command, with the time):
+   ```bash
+   curl -s -D - -w 'time: %{time_total}s\n' -x localhost:8080 http://localhost:8000/index.html | grep -E '^(X-Cache|time)|Version'
+   ```
+   ```
+   X-Cache: MISS
+   <p>Version 1</p>
+   time: 2.016689s
+   ```
+2. Wait more than 30 s **without touching the file** (do not even save it: saving changes its date), then ask again:
+   ```
+   X-Cache: REVALIDATED
+   <p>Version 1</p>
+   time: 2.011099s
+   ```
+3. Change `Version 1` into `Version 2`, save, wait more than 30 s, ask again:
+   ```
+   X-Cache: MISS
+   <p>Version 2</p>
+   time: 2.010234s
+   ```
+**Origin server log:** the `304` is the conditional GET of point 2.
+```
+"GET /index.html HTTP/1.1" 200 -
+"GET /index.html HTTP/1.1" 304 -
+"GET /index.html HTTP/1.1" 200 -
+```
+Now the proxy **knows**. But look at the time of `REVALIDATED`: 2 s, like a `MISS`. The body did not travel again, but the question still costs a trip to the origin. This is why real caches do both: a young copy is used at once (`HIT`), an old copy is checked with a conditional GET.
+
 ---
 
 ## Problem solving
@@ -239,6 +320,6 @@ c) Much less than in the past: it can only cache the few http sites. This is why
 <summary>P4</summary>
 
 a) On a HIT `do_GET` answers from `cache` and never contacts the origin: once an object is saved, it stays there until the proxy is restarted.
-b) For example: keep a copy only for a limited time, or ask the origin "has this object changed since I copied it?" before using the copy. Both cost extra requests to the origin, so fewer savings.
+b) Keep a copy only for a limited time (Step 10), or ask the origin "has this object changed since I copied it?" with a conditional GET (Step 11). Both cost extra requests to the origin, so fewer savings.
 c) A logo changes very rarely: an old copy is fine for a long time. Live scores change every minute: an old copy is wrong. How long a copy is good depends on the object.
 </details>
