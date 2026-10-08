@@ -4,30 +4,27 @@ Reference: Kurose & Ross, *Computer Networking*, Ch. 2 (Sec. 2.2.2)
 
 ## Concepts
 
-1. **Non-persistent** HTTP: a **new TCP connection for every object**. Every object costs **2 RTT**: 1 for the TCP handshake, 1 for the HTTP request and response.
-2. **Persistent** HTTP: **one TCP connection for many objects**. The first object costs 2 RTT, every next object only **1 RTT**: the connection is already open.
+1. Non-persistent HTTP: a new TCP connection for every object. Every object costs 2 RTT: 1 for the TCP handshake, 1 for the HTTP request and response.
+2. Persistent HTTP: one TCP connection for many objects. The first object costs 2 RTT, every next object only 1 RTT: the connection is already open.
 3. HTTP/1.0 is non-persistent by default, HTTP/1.1 is persistent by default.
-
-| N objects | Non-persistent | Persistent |
-|---|---|---|
-| time | N × 2 RTT | 2 RTT + (N − 1) × 1 RTT |
+4. With N objects, non-persistent HTTP takes N × 2 RTT, persistent HTTP takes 2 RTT + (N − 1) × 1 RTT.
 
 ## Files
 
 | File | What it is |
 |---|---|
-| `server.py` | A web server, port **8000**. It logs every TCP connection (`OPEN` / `CLOSED`) and every request on it, with the **client port**: same port = same TCP connection |
+| `server.py` | A web server, port 8000. It logs every TCP connection (`OPEN` / `CLOSED`) and every request on it, with the client port: the same port means the same TCP connection |
 
 In `server.py` two lines matter:
 ```python
 RTT = 0.5                          # seconds: our (artificial) round-trip time
 protocol_version = 'HTTP/1.1'      # the server can do both: the CLIENT decides (curl --http1.0 / --http1.1)
 ```
-On localhost the real RTT is almost zero, so the server **adds it by itself** with `time.sleep`: 1 RTT for every new connection (the handshake) and 1 RTT for every request.
+On localhost the real RTT is almost zero, so the server adds it by itself with `time.sleep`: 1 RTT for every new connection (the handshake) and 1 RTT for every request.
 
-**We never change the server.** We change only the client: `curl --http1.0` (non-persistent) or `curl --http1.1` (persistent).
+We never change the server. We change only the client: `curl --http1.0` (non-persistent) or `curl --http1.1` (persistent).
 
-Use two tmux panes: the **server** on the left, the **client commands** on the right. Start `server.py` in the left pane. It prints:
+Use two tmux panes: the server on the left, the client commands on the right. Start `server.py` in the left pane. It prints:
 ```
 22:03:43.120  Server on http://localhost:8000 (HTTP/1.1, RTT 0.5 s)
 ```
@@ -38,13 +35,13 @@ Use two tmux panes: the **server** on the left, the **client commands** on the r
 
 ### Step 1. Predict
 
-We will download **3 objects** with RTT = 0.5 s and **HTTP/1.0**. How long will each one take? And all together? Write it down.
+We will download 3 objects with RTT = 0.5 s and HTTP/1.0. How long will each one take? And all together? Write it down.
 
 ### Step 2. Measure
 
-**What it does:** `[1-3]` makes curl ask for `/1`, `/2`, `/3`: **3 objects, one after the other**, with one command. `--http1.0` uses HTTP/1.0. `-s` (silent) hides the progress bar. `-w` prints the time of each one.
+`[1-3]` makes curl ask for `/1`, `/2`, `/3`: 3 objects, one after the other, with one command. `--http1.0` uses HTTP/1.0. `-s` (silent) hides the progress bar. `-w` prints the time of each one.
 
-> **`-w` (write-out):** after every download, curl prints the text you give it. The parts written as `%{...}` are **curl variables**: curl fills them in by itself. `%{time_total}` = how many seconds that download took. Online: [Write out - everything curl](https://everything.curl.dev/usingcurl/verbose/writeout.html) (a friendly guide with examples) and the [full list of variables](https://curl.se/docs/manpage.html#--write-out) in the official manual (or `man curl` in the terminal).
+> `-w` (write-out): after every download, curl prints the text you give it. The parts written as `%{...}` are curl variables: curl fills them in by itself. `%{time_total}` is how many seconds that download took. Online: [Write out - everything curl](https://everything.curl.dev/usingcurl/verbose/writeout.html) (a friendly guide with examples) and the [full list of variables](https://curl.se/docs/manpage.html#--write-out) in the official manual (or `man curl` in the terminal).
 
 ```bash
 curl --http1.0 -s -w 'time: %{time_total}s\n' 'http://localhost:8000/[1-3]'
@@ -70,7 +67,7 @@ time: 1.011871s
 22:03:46.582  [port 58914]   GET /3 HTTP/1.0
 22:03:46.583  [port 58914] connection CLOSED after 1 request(s)
 ```
-**3 connections, 1 request each** (3 different ports). Every object costs 2 RTT = 1 s. Total: **3 s**.
+3 connections, 1 request each (3 different ports). Every object costs 2 RTT = 1 s. Total: 3 s.
 
 The server could keep the connection open, but the client speaks HTTP/1.0: the server closes the connection after every answer.
 
@@ -80,7 +77,7 @@ The server could keep the connection open, but the client speaks HTTP/1.0: the s
 
 ### Step 3. Predict, then measure
 
-Same 3 objects, now with **HTTP/1.1**. How long for each object and in total? Write it down, then run:
+Same 3 objects, now with HTTP/1.1. How long for each object and in total? Write it down, then run:
 
 ```bash
 curl --http1.1 -s -w 'time: %{time_total}s\n' 'http://localhost:8000/[1-3]'
@@ -102,11 +99,11 @@ time: 0.506059s
 22:03:48.623  [port 58916]   GET /3 HTTP/1.1
 22:03:48.624  [port 58916] connection CLOSED after 3 request(s)
 ```
-**1 connection, 3 requests** (always port 58916). Look at the times: 1 s from `OPEN` to the first `GET`, then only 0.5 s between one `GET` and the next. The first object costs 2 RTT = 1 s, the others 1 RTT = 0.5 s. Total: **2 s**.
+1 connection, 3 requests (always port 58916). Look at the times: 1 s from `OPEN` to the first `GET`, then only 0.5 s between one `GET` and the next. The first object costs 2 RTT = 1 s, the others 1 RTT = 0.5 s. Total: 2 s.
 
 ### Step 4. curl says it too
 
-**What it does:** `-v` (verbose) shows what curl does with the connection. `-v` writes on the error channel (stderr): `2>&1` sends it to the normal output, so that `grep` can keep only the lines we want.
+`-v` (verbose) shows what curl does with the connection. `-v` writes on the error channel (stderr): `2>&1` sends it to the normal output, so that `grep` can keep only the lines we want.
 
 ```bash
 curl --http1.0 -sv 'http://localhost:8000/[1-2]' 2>&1 | grep -iE 're-using|closing'
@@ -123,17 +120,17 @@ HTTP/1.0: the connection is closed. HTTP/1.1: it is reused.
 
 ## Part C. A real site
 
-No local server here: we ask Google for its small icon **N times**, with **one** curl command. As in Parts A and B, we change only the HTTP version of the client.
+No local server here: we ask Google for its small icon N times, with one curl command. As in Parts A and B, we change only the HTTP version of the client.
 
 | Option | What it does |
 |---|---|
-| `"...favicon.ico?[1-$N]"` | curl asks `favicon.ico?1`, `favicon.ico?2`, ... up to `favicon.ico?N`: **N requests** |
-| `--http1.1` | use HTTP/1.1: **persistent** |
-| `--http1.0` | use HTTP/1.0: **non-persistent** |
+| `"...favicon.ico?[1-$N]"` | curl asks `favicon.ico?1`, `favicon.ico?2`, ... up to `favicon.ico?N`: N requests |
+| `--http1.1` | use HTTP/1.1: persistent |
+| `--http1.0` | use HTTP/1.0: non-persistent |
 | `-o /dev/null` | throw away the icons |
-| `%{local_port}` | curl variable: the client port: same port = same connection |
-| `%{num_connects}` | curl variable: `1` = curl opened a new connection, `0` = it reused the old one |
-| `/usr/bin/time -p` | measures the whole command: `real` = **total time** of the N requests |
+| `%{local_port}` | curl variable: the client port. The same port means the same connection |
+| `%{num_connects}` | curl variable: `1` if curl opened a new connection, `0` if it reused the old one |
+| `/usr/bin/time -p` | measures the whole command: `real` is the total time of the N requests |
 
 ### Step 5. Persistent (HTTP/1.1)
 
@@ -156,7 +153,7 @@ real 0.38
 user 0.01
 sys 0.01
 ```
-One connection: the first icon pays the connection, the others do not. **Total: 0.38 s.**
+One connection: the first icon pays the connection, the others do not. Total: 0.38 s.
 
 ### Step 6. Non-persistent (HTTP/1.0)
 
@@ -180,7 +177,7 @@ real 1.13
 user 0.11
 sys 0.02
 ```
-A new connection for every icon. **Total: 1.13 s, clearly more** (in our tests from 1.5 to 3 times more, depending on the network). With https a new connection costs even more than 1 RTT: after the TCP handshake there is also the TLS handshake.
+A new connection for every icon. Total: 1.13 s, clearly more (in our tests from 1.5 to 3 times more, depending on the network). With https a new connection costs even more than 1 RTT: after the TCP handshake there is also the TLS handshake.
 
 On a real network the times change a little at every run: run both commands two or three times. What never changes is the `port` column.
 
@@ -188,7 +185,7 @@ On a real network the times change a little at every run: run both commands two 
 
 ## Questions
 
-**Q1.** With RTT = 0.5 s, how long do **10 objects** take, non-persistent and persistent? Compute first, then check: use `[1-10]`.
+**Q1.** With RTT = 0.5 s, how long do 10 objects take, non-persistent and persistent? Compute first, then check: use `[1-10]`.
 ```bash
 curl --http1.0 -s -w 'time: %{time_total}s\n' 'http://localhost:8000/[1-10]'
 curl --http1.1 -s -w 'time: %{time_total}s\n' 'http://localhost:8000/[1-10]'
@@ -207,23 +204,23 @@ curl --http1.1 -s -w 'time: %{time_total}s\n' 'http://localhost:8000/[1-10]'
 <details>
 <summary>Q1</summary>
 
-Non-persistent: 10 × 2 × 0.5 = **10 s** (1 s per object). Persistent: 2 × 0.5 + 9 × 0.5 = **5.5 s** (1 s for the first, 0.5 s for each other).
+Non-persistent: 10 × 2 × 0.5 = 10 s (1 s per object). Persistent: 2 × 0.5 + 9 × 0.5 = 5.5 s (1 s for the first, 0.5 s for each other).
 </details>
 
 <details>
 <summary>Q2</summary>
 
-Before the first request there is no connection yet: the TCP handshake (1 RTT) must happen first. Persistent connections save the handshake only for the **next** objects.
+Before the first request there is no connection yet: the TCP handshake (1 RTT) must happen first. Persistent connections save the handshake only for the next objects.
 </details>
 
 <details>
 <summary>Q3</summary>
 
-11 objects. Non-persistent: 11 × 2 × 100 ms = **2.2 s**. Persistent: 2 × 100 ms + 10 × 100 ms = **1.2 s**.
+11 objects. Non-persistent: 11 × 2 × 100 ms = 2.2 s. Persistent: 2 × 100 ms + 10 × 100 ms = 1.2 s.
 </details>
 
 <details>
 <summary>Q4</summary>
 
-**No**: every object takes 1 s and the server logs `connection CLOSED after 1 request(s)` every time. A persistent connection needs **both** sides: if the server speaks HTTP/1.0, it closes the connection after every answer, even if the client would like to keep it open.
+No: every object takes 1 s and the server logs `connection CLOSED after 1 request(s)` every time. A persistent connection needs both sides: if the server speaks HTTP/1.0, it closes the connection after every answer, even if the client would like to keep it open.
 </details>
