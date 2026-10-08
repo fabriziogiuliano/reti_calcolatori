@@ -14,7 +14,7 @@ Reference: Kurose & Ross, *Computer Networking*, Ch. 2 (Sec. 2.2.3)
 
 | File | What it is |
 |---|---|
-| `redirect_server.py` | Local web server that answers with redirects (`http.server`) |
+| `redirect_server.py` | Local web server that answers with redirects ([`http.server`](https://docs.python.org/3/library/http.server.html), Python standard library) |
 | `redirect_server_raw.py` | The same server written with bare sockets |
 | `redirect.py` | Minimal client that follows redirects, like a browser |
 

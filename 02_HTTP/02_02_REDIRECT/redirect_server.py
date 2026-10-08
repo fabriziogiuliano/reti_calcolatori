@@ -1,5 +1,9 @@
 # A tiny web server that answers (almost) only with redirects.
 # Run: python redirect_server.py    then open http://localhost:8000/a
+#
+# Note: http.server is for teaching and testing, NOT for production.
+# One client at a time, no timeouts, no TLS, no authentication, minimal parsing.
+# Docs: https://docs.python.org/3/library/http.server.html
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # path -> (status code, where to go next)
@@ -11,6 +15,8 @@ ROUTES = {
 }
 
 class Handler(BaseHTTPRequestHandler):
+    # The name matters: for each request the base class calls 'do_' + method,
+    # so do_GET handles GET. No do_HEAD here -> HEAD gets 501.
     def do_GET(self):
         if self.path in ROUTES:
             code, location = ROUTES[self.path]
