@@ -1,0 +1,18 @@
+#Scapy sender code example
+
+pkt = IP(dst="127.0.0.1") / UDP(dport=8888) / Raw("ciao")
+
+#Scapy sniffer code example
+
+sniff(iface="lo", filter="udp dst port 8888", prn=lambda pkt: pkt.summary())
+
+#Creare payload custm: ESEMPIO taroccare la checksum
+
+
+#udp.chksum = 0x1234 # Il nostro checksum errato
+udp = UDP(dport=8888)/Raw("ciao")
+raw_payload = udp.build()
+pkt = IP(dst="127.0.0.1")/Raw(load=raw_payload)
+
+pkt = IP(dst="127.0.0.1")/UDP(dport=8888)/Raw("ciao")
+send(pkt)
