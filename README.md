@@ -18,3 +18,5 @@ Setup: before the first lab, follow [00_PYTHON_ENVIRONMENT_SETUP](00_PYTHON_ENVI
 | [02_HTTP/02_06_HTTP_HOL](02_HTTP/02_06_HTTP_HOL/) | HOL blocking, HTTP/2 | a fourth object |
 | [03_SMTP](03_SMTP/) | SMTP by hand | change the receiver |
 | [04_DNS](04_DNS/) | dig, records, cache | who handles the mail of a domain? |
+| [05_SOCKET](05_SOCKET/) | UDP sockets with ncat, lsof, tcpdump | – |
+| [06_SCAPY](06_SCAPY/) | forging packets with Scapy | break the UDP checksum |
