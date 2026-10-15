@@ -89,7 +89,11 @@ Now you can close and reopen the client as many times as you want: every new cli
 > ```
 > Ncat: UDP mode does not support the -k or --keep-open options, except with --exec or --sh-exec. QUITTING.
 > ```
-> Check your version with `ncat --version`: on macOS Homebrew installs a recent one (7.97), where `-k` works.
+> Check in WSL (or Linux) which version you have:
+> ```bash
+> ncat --version
+> ```
+> If you see `Ncat: Version 7.80 ( https://nmap.org/ncat )`, your ncat does not support `-k` in UDP mode: use the workaround below. On macOS Homebrew installs a recent version (7.97), where `-k` works.
 >
 > Workaround: as UDP server use `server-udp.py` (in [05_SOCKET](./)) instead of `ncat -u -l -k 8888`. It listens on the same port 8888, accepts datagrams from any client, and prints each one with the address of the sender.
 > </details>
