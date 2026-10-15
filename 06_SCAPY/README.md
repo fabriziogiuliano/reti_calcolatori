@@ -121,17 +121,18 @@ In the left pane (normal terminal) start a UDP server, as in [05_SOCKET](../05_S
 ncat -u -l -k 8888
 ```
 
-<details>
-<summary>Troubleshooting: "UDP mode does not support the -k or --keep-open options"</summary>
-
-Old versions of ncat do not accept `-k` in UDP mode. Ubuntu (and so WSL) installs ncat 7.80, which stops with:
-```
-Ncat: UDP mode does not support the -k or --keep-open options, except with --exec or --sh-exec. QUITTING.
-```
-Check your version with `ncat --version`: on macOS Homebrew installs a recent one (7.97), where `-k` works.
-
-Workaround: as UDP server use `server-udp.py` (in [05_SOCKET](../05_SOCKET/)) instead of `ncat -u -l -k 8888`. It listens on the same port 8888 and accepts datagrams from any client, and it prints each one with the address of the sender.
-</details>
+> [!WARNING]
+> <details>
+> <summary><b>Troubleshooting</b>: "UDP mode does not support the -k or --keep-open options"</summary>
+>
+> Old versions of ncat do not accept `-k` in UDP mode. Ubuntu (and so WSL) installs ncat 7.80, which stops with:
+> ```
+> Ncat: UDP mode does not support the -k or --keep-open options, except with --exec or --sh-exec. QUITTING.
+> ```
+> Check your version with `ncat --version`: on macOS Homebrew installs a recent one (7.97), where `-k` works.
+>
+> Workaround: as UDP server use `server-udp.py` (in [05_SOCKET](../05_SOCKET/)) instead of `ncat -u -l -k 8888`. It listens on the same port 8888, accepts datagrams from any client, and prints each one with the address of the sender.
+> </details>
 
 ### Command
 
