@@ -430,3 +430,21 @@ tcpdump says `udp sum ok`: the error is **not detected**, even if two bits chang
 
 Compare with Q1: `ckam` is `ciam` plus one more flip (`i` → `k`) that brings the sum back.
 </details>
+
+### Step 9: no checksum at all
+
+In IPv4 the UDP checksum is optional: the value `0` means "the sender did not compute it". Build a new packet and write `chksum=0` yourself: Scapy keeps it and does not compute anything.
+
+```python
+pkt = IP(dst="127.0.0.1") / UDP(sport=55555, dport=8888, chksum=0) / Raw(load=b"ciao\n")
+pkt[Raw].load = b"zzzz\n"
+send(pkt)
+```
+
+**Q3**: what does tcpdump say? Would a receiver accept `zzzz`?
+
+<details>
+<summary>Q3</summary>
+
+tcpdump prints `[no cksum]`: there is nothing to check. A receiver accepts the datagram whatever it contains, even `zzzz` instead of `ciao`: no error can be detected. In IPv6 this is not allowed: the UDP checksum is mandatory.
+</details>
