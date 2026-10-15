@@ -1,0 +1,26 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='960' height='262' viewBox='0 0 960 262'>
+<defs><marker id='arr' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#d22'/></marker><marker id='arrg' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#1a8a1a'/></marker></defs>
+<rect width='960' height='262' fill='white'/>
+<text x='30.0' y='41' font-family='Menlo, Consolas, monospace' font-size='16' font-weight='bold' fill='#111' textLength='57.6' lengthAdjust='spacingAndGlyphs' xml:space='preserve'>pkt = </text>
+<rect x='85.6' y='22' width='186.4' height='26' rx='3' fill='#33cc33'/>
+<text x='87.6' y='41' font-family='Menlo, Consolas, monospace' font-size='16' font-weight='bold' fill='#111' textLength='182.4' lengthAdjust='spacingAndGlyphs' xml:space='preserve'>IP(dst=&quot;127.0.0.1&quot;)</text>
+<text x='270.0' y='41' font-family='Menlo, Consolas, monospace' font-size='16' font-weight='bold' fill='#111' textLength='28.8' lengthAdjust='spacingAndGlyphs' xml:space='preserve'> / </text>
+<rect x='296.8' y='22' width='148.0' height='26' rx='3' fill='#ffff33'/>
+<text x='298.8' y='41' font-family='Menlo, Consolas, monospace' font-size='16' font-weight='bold' fill='#111' textLength='144.0' lengthAdjust='spacingAndGlyphs' xml:space='preserve'>UDP(dport=8888)</text>
+<text x='442.8' y='41' font-family='Menlo, Consolas, monospace' font-size='16' font-weight='bold' fill='#111' textLength='28.8' lengthAdjust='spacingAndGlyphs' xml:space='preserve'> / </text>
+<rect x='469.6' y='22' width='186.4' height='26' rx='3' fill='#4472c4'/>
+<text x='471.6' y='41' font-family='Menlo, Consolas, monospace' font-size='16' font-weight='bold' fill='white' textLength='182.4' lengthAdjust='spacingAndGlyphs' xml:space='preserve'>Raw(load=b&quot;ciao\n&quot;)</text>
+<rect x='520' y='105' width='150' height='34' fill='#4472c4' stroke='#333'/>
+<text x='595.0' y='128' font-family='Helvetica, Arial, sans-serif' font-size='17' font-weight='bold' fill='white' text-anchor='middle'>APP</text>
+<text x='684' y='127' font-family='Helvetica, Arial, sans-serif' font-size='14' fill='#333'>payload: the data</text>
+<rect x='520' y='139' width='150' height='34' fill='#ffff33' stroke='#333'/>
+<text x='595.0' y='162' font-family='Helvetica, Arial, sans-serif' font-size='17' font-weight='bold' fill='#111' text-anchor='middle'>UDP</text>
+<text x='684' y='161' font-family='Helvetica, Arial, sans-serif' font-size='14' fill='#333'>UDP header: ports, length, checksum</text>
+<rect x='520' y='173' width='150' height='34' fill='#33cc33' stroke='#333'/>
+<text x='595.0' y='196' font-family='Helvetica, Arial, sans-serif' font-size='17' font-weight='bold' fill='#111' text-anchor='middle'>IP</text>
+<text x='684' y='195' font-family='Helvetica, Arial, sans-serif' font-size='14' fill='#333'>IP header: addresses, TTL, protocol</text>
+<path d='M563,52 C563,78 595.0,68 595.0,101' fill='none' stroke='#d22' stroke-width='2.5' marker-end='url(#arr)'/>
+<path d='M371,52 C371,136.0 410.8,156.0 516,156.0' fill='none' stroke='#d22' stroke-width='2.5' marker-end='url(#arr)'/>
+<path d='M179,52 C179,170.0 238.8,190.0 516,190.0' fill='none' stroke='#d22' stroke-width='2.5' marker-end='url(#arr)'/>
+<text x='30' y='245' font-family='Helvetica, Arial, sans-serif' font-size='15' fill='#111'><tspan font-weight='bold'>/</tspan> = put the next layer on top: the first one written (IP) is at the bottom of the stack.</text>
+</svg>

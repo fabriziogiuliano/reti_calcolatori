@@ -35,6 +35,8 @@ Online: [Scapy usage guide](https://scapy.readthedocs.io/en/latest/usage.html).
 
 > A packet is a stack of headers. In Scapy each header is an object, and `/` puts one on top of the other.
 
+![Each piece of the Scapy line is one layer of the stack](img/scapy-layers.svg)
+
 ### Command
 
 Build an IP header towards `8.8.8.8` and print it.
@@ -357,10 +359,10 @@ Checksum and data agree: `udp sum ok`.
 
 ### Step 7: flip one bit
 
-`a` → `b` is one bit: `ciao` becomes `cibo`. The checksum stays `0x373d`.
+`o` → `m` is one bit: `o` is `0110 1111`, `m` is `0110 1101` (the bit of value 2 goes from 1 to 0). `ciao` becomes `ciam`. The checksum stays `0x373d`.
 
 ```python
-pkt[Raw].load = b"cibo\n"
+pkt[Raw].load = b"ciam\n"
 send(pkt)
 ```
 
@@ -369,7 +371,10 @@ send(pkt)
 <details>
 <summary>Q1</summary>
 
-Yes, the error is **detected**: tcpdump prints `[bad udp cksum 0x373d -> 0x363d!]`. The checksum of `cibo` should be `0x363d`, but the packet carries `0x373d`. On a real network the receiver's kernel would **silently drop** this datagram: UDP does not ask for it again, the application never sees it.
+Yes, the error is **detected**: tcpdump prints `[bad udp cksum 0x373d -> 0x373f!]`. The checksum of `ciam` should be `0x373f`, but the packet carries `0x373d`.
+
+![One flipped bit: the sum changes, the error is detected](img/checksum-one-bit.svg)
+ On a real network the receiver's kernel would **silently drop** this datagram: UDP does not ask for it again, the application never sees it.
 </details>
 
 ### Step 8: flip two bits that cancel out
@@ -420,4 +425,8 @@ send(pkt)
 <summary>Q2</summary>
 
 tcpdump says `udp sum ok`: the error is **not detected**, even if two bits changed. Any receiver would accept `ckam` as if it were the message sent. The checksum only looks at the sum of the words, and two opposite changes in the same bit position cancel out. It is the case of slide 3-33: the Internet checksum is a weak protection.
+
+![Two mirrored bits: the sum does not change, the error is not detected](img/checksum-two-bits.svg)
+
+Compare with Q1: `ckam` is `ciam` plus one more flip (`i` → `k`) that brings the sum back.
 </details>
