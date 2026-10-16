@@ -1,3 +1,0 @@
-bytes downloaded: 10485760
-time: 9.354948 s
-average throughput: 1120878 B/s
