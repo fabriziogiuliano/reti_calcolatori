@@ -5,16 +5,20 @@ import argparse
 import logging
 import os
 import socket
+import sys
 import time
 
 RECEIVER = ("127.0.0.1", 9999)
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--n", type=int, default=10, help="packets to send")
 parser.add_argument("--size", type=int, default=1000, help="data bytes per packet")
 parser.add_argument("--timeout", type=float, default=0.5, help="seconds before a retransmission")
-parser.add_argument("--c", type=float, default=1e9, help="nominal link capacity, bit/s")
+parser.add_argument("--c", type=float, default=1e9, help="link capacity, bit/s")
 parser.add_argument("--verbose", action="store_true", help="also log the FSM states")
+if len(sys.argv) == 1:     # no parameters: show the help
+    parser.print_help()
+    sys.exit()
 args = parser.parse_args()
 N, SIZE, TIMEOUT, C = args.n, args.size, args.timeout, args.c
 
