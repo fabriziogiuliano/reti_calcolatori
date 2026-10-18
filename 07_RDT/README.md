@@ -51,7 +51,7 @@ Emulated times:
 
 ## 1. Measure stop-and-wait
 
-Start `rdt_receiver.py --rtt 0.1 --verbose` in the left pane, then `rdt_sender.py --n 10 --verbose` in the right pane.
+Start `rdt_receiver.py --rtt 0.1` in the left pane, then `rdt_sender.py --n 10` in the right pane.
 
 With `--verbose` each log line shows the FSM state (as in the Kurose rdt3.0 sender and rdt2.2 receiver) and the ms since the start.
 
