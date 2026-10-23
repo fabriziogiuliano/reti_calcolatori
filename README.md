@@ -20,3 +20,4 @@ Setup: before the first lab, follow [00_PYTHON_ENVIRONMENT_SETUP](00_PYTHON_ENVI
 | [04_DNS](04_DNS/) | dig, records, cache | who handles the mail of a domain? |
 | [05_SOCKET](05_SOCKET/) | UDP sockets with ncat, lsof, tcpdump | – |
 | [06_SCAPY](06_SCAPY/) | forging packets with Scapy | break the UDP checksum |
+| [08_TCP_SACK_TS](08_TCP_SACK_TS/) | TCP SACK and Timestamps, Karn and Jacobson | – |

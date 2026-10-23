@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 310" width="860" height="310" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#000">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#000"/>
+    </marker>
+  </defs>
+  <rect width="860" height="310" fill="#fff"/>
+
+  <!-- endpoints -->
+  <rect x="30" y="80" width="130" height="120" fill="#fff" stroke="#000" stroke-width="1.5"/>
+  <text x="95" y="135" text-anchor="middle" font-size="16" font-weight="bold">Client</text>
+  <text x="95" y="156" text-anchor="middle" font-size="12" font-family="Menlo, Consolas, monospace">tcp_client.py</text>
+
+  <rect x="700" y="80" width="130" height="120" fill="#fff" stroke="#000" stroke-width="1.5"/>
+  <text x="765" y="135" text-anchor="middle" font-size="16" font-weight="bold">Server</text>
+  <text x="765" y="156" text-anchor="middle" font-size="12" font-family="Menlo, Consolas, monospace">tcp_server.py</text>
+
+  <!-- emulated channel -->
+  <rect x="220" y="45" width="420" height="190" fill="none" stroke="#000" stroke-width="1" stroke-dasharray="6 4"/>
+  <text x="232" y="66" font-weight="bold">Emulated channel <tspan font-weight="normal" fill="#555">(tc netem / dummynet)</tspan></text>
+
+  <!-- data path: client -> loss -> server -->
+  <line x1="160" y1="110" x2="360" y2="110" stroke="#000" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="360" y="92" width="140" height="36" fill="#eee" stroke="#000" stroke-width="1.5"/>
+  <text x="430" y="115" text-anchor="middle">Loss, p = 5–20 %</text>
+  <line x1="500" y1="110" x2="700" y2="110" stroke="#000" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="290" y="102" text-anchor="middle" font-style="italic">data</text>
+
+  <!-- ACK path: server -> delay -> client -->
+  <line x1="700" y1="170" x2="500" y2="170" stroke="#000" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="360" y="152" width="140" height="36" fill="#eee" stroke="#000" stroke-width="1.5"/>
+  <text x="430" y="175" text-anchor="middle">Delay, d = 100 ms</text>
+  <line x1="360" y1="170" x2="160" y2="170" stroke="#000" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="570" y="162" text-anchor="middle" font-style="italic">ACK</text>
+
+  <!-- sniffer: taps at the output of each block -->
+  <circle cx="600" cy="110" r="3.5"/>
+  <circle cx="260" cy="170" r="3.5"/>
+  <path d="M600,110 V272 H505 M260,170 V272 H355" fill="none" stroke="#000" stroke-width="1" stroke-dasharray="3 3"/>
+  <rect x="355" y="255" width="150" height="34" fill="#fff" stroke="#000" stroke-width="1.5"/>
+  <text x="430" y="277" text-anchor="middle">Sniffer (Scapy)</text>
+</svg>
