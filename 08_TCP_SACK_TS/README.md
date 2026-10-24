@@ -10,7 +10,7 @@ The sniffer sees each packet when it comes out of the channel, so lost packets n
 
 - `tcp_server.py`: port 12000, reads everything.
 - `tcp_client.py`: `--n` chunks of `--size` bytes (also the MSS, default 1000), one every `--interval` s (0 = all at once).
-- `01_sack_sniffer.py`: one line per segment, with the SACK blocks of the ACKs.
+- `01_sack_sniffer.py`: one line per TCP header (flags, seq, ack, length), with the SACK blocks.
 - `02_rto_sniffer.py`: SampleRTT from the timestamps, then EstimatedRTT, DevRTT, RTO.
 
 Panes: server, client, sniffer. On Linux the sniffer needs sudo.
@@ -47,22 +47,20 @@ Stop: `sudo pfctl -f /etc/pf.conf; sudo pfctl -d; sudo dnctl -q flush`
 
 Emulator: data **loss 20 %**. Start `01_sack_sniffer.py`, then the client with `--n 10 --interval 0.1`. Losses are random: each run is different.
 
-One line per segment: time from the start (ms), ports, relative `seq` / `ack`, payload length. An ACK with the SACK option adds its blocks: `SLE` = first byte, `SRE` = last byte + 1. Connection setup and close (SYN, FIN) are shown only as `CONNECTION` lines.
+One line per TCP header: time from the start (ms), ports, flags (`S` SYN, `A` ACK, `F` FIN), relative `seq` / `ack`, payload length. An ACK with the SACK option adds its blocks: `SLE` = first byte, `SRE` = last byte + 1.
 
 **Sniffer output** (real run, macOS, heavy loss)
 ```
-------- CONNECTION open -------
-ts:00334,SPORT:63821,DPORT:12000,seq:03001,ack:00001,data_len:1000
-ts:00439,SPORT:63821,DPORT:12000,seq:04001,ack:00001,data_len:1000
-ts:00485,SPORT:63821,DPORT:12000,seq:00001,ack:00001,data_len:1000
-ts:00486,SPORT:12000,DPORT:63821,seq:00001,ack:01001,data_len:0,SACK,SLE:03001,SRE:05001
-ts:00786,SPORT:63821,DPORT:12000,seq:01001,ack:00001,data_len:1000
-ts:01786,SPORT:63821,DPORT:12000,seq:01001,ack:00001,data_len:1000
-ts:04588,SPORT:63821,DPORT:12000,seq:01001,ack:00001,data_len:1000
-ts:04588,SPORT:12000,DPORT:63821,seq:00001,ack:02001,data_len:0,SACK,SLE:01001,SRE:02001,SLE:03001,SRE:05001
-ts:05842,SPORT:63821,DPORT:12000,seq:02001,ack:00001,data_len:1000
-ts:05843,SPORT:12000,DPORT:63821,seq:00001,ack:05001,data_len:0
-------- CONNECTION close -------
+ts:00334,SPORT:63821,DPORT:12000,S:0,A:1,F:0,seq:03001,ack:00001,data_len:1000
+ts:00439,SPORT:63821,DPORT:12000,S:0,A:1,F:0,seq:04001,ack:00001,data_len:1000
+ts:00485,SPORT:63821,DPORT:12000,S:0,A:1,F:0,seq:00001,ack:00001,data_len:1000
+ts:00486,SPORT:12000,DPORT:63821,S:0,A:1,F:0,seq:00001,ack:01001,data_len:0,SACK,SLE:03001,SRE:05001
+ts:00786,SPORT:63821,DPORT:12000,S:0,A:1,F:0,seq:01001,ack:00001,data_len:1000
+ts:01786,SPORT:63821,DPORT:12000,S:0,A:1,F:0,seq:01001,ack:00001,data_len:1000
+ts:04588,SPORT:63821,DPORT:12000,S:0,A:1,F:0,seq:01001,ack:00001,data_len:1000
+ts:04588,SPORT:12000,DPORT:63821,S:0,A:1,F:0,seq:00001,ack:02001,data_len:0,SACK,SLE:01001,SRE:02001,SLE:03001,SRE:05001
+ts:05842,SPORT:63821,DPORT:12000,S:0,A:1,F:0,seq:02001,ack:00001,data_len:1000
+ts:05843,SPORT:12000,DPORT:63821,S:0,A:1,F:0,seq:00001,ack:05001,data_len:0
 ```
 - `ack:01001` + `SLE:03001,SRE:05001`: the receiver has 1-1000, **misses 1001-3000**, has 3001-5000 (kept out of order, as in SR).
 - `seq:01001` is sent again and again: each time the RTO doubles (≈ 1 s, then ≈ 3 s).

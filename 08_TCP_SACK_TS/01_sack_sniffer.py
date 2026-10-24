@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# SACK sniffer: one CSV-like line per segment, with the SACK blocks of the ACKs
+# SACK sniffer: one CSV-like line per TCP header, with the SACK blocks
 
 import sys
 from scapy.all import sniff, TCP
@@ -11,35 +11,33 @@ isn_c = 0      # ISN of the client (from the SYN)
 isn_s = 0      # ISN of the server (from the SYN-ACK)
 t_start = 0    # time of the SYN
 cport = 0      # client port of the current connection
+ws_c = 0       # window scale of the client (from the SYN)
+ws_s = 0       # window scale of the server (from the SYN-ACK)
 
 
 def sack_show(pkt):
-    global isn_c, isn_s, t_start, cport
+    global isn_c, isn_s, t_start, cport, ws_c, ws_s
     tcp = pkt[TCP]
 
-    # CONNECTION open / close (SYN, FIN): not explained yet, print only a text
-    if tcp.flags.S:
-        if tcp.flags.A:                     # SYN-ACK: ISN of the server
-            isn_s = tcp.seq
-        else:                               # SYN: ISN of the client
-            isn_c, t_start, cport = tcp.seq, tcp.time, tcp.sport
-            print("------- CONNECTION open -------")
+    if tcp.flags.S and not tcp.flags.A:     # SYN: new connection, ISN of the client
+        isn_c, t_start, cport = tcp.seq, tcp.time, tcp.sport
+        ws_c = dict(tcp.options).get("WScale", 0)
+    if tcp.flags.S and tcp.flags.A:         # SYN-ACK: ISN of the server
+        isn_s = tcp.seq
+        ws_s = dict(tcp.options).get("WScale", 0)
+    if cport not in (tcp.sport, tcp.dport): # packet of an old connection
         return
-    if cport not in (tcp.sport, tcp.dport):           # packet of an old connection
-        return
-    if tcp.flags.F and tcp.dport == PORT:
-        print("------- CONNECTION close -------")
-    if len(tcp.payload) == 0 and (tcp.flags.F or tcp.dport == PORT):
-        return                              # FIN, and client ACKs without data
 
     if tcp.dport == PORT:                   # client -> server
-        seq, ack = tcp.seq - isn_c, tcp.ack - isn_s
+        seq, ack, ws = tcp.seq - isn_c, tcp.ack - isn_s, ws_c
     else:                                   # server -> client
-        seq, ack = tcp.seq - isn_s, tcp.ack - isn_c
-    if tcp.sport == PORT and ack <= 1:      # server ACK before any data (macOS window update)
-        return
+        seq, ack, ws = tcp.seq - isn_s, tcp.ack - isn_c, ws_s
+    if not tcp.flags.A:                     # no ACK flag (the SYN): the ack field means nothing
+        ack = 0
+    # receive window in bytes = window field x 2^scale (never scaled in SYN and SYN-ACK)
+    win = tcp.window if tcp.flags.S else tcp.window << ws
 
-    line = f"ts:{round(1000*(tcp.time-t_start)):05},SPORT:{tcp.sport:05},DPORT:{tcp.dport:05},seq:{seq:05},ack:{ack:05},data_len:{len(tcp.payload)}"
+    line = f"ts:{round(1000*(tcp.time-t_start)):05},SPORT:{tcp.sport:05},DPORT:{tcp.dport:05},S:{int(tcp.flags.S)},A:{int(tcp.flags.A)},F:{int(tcp.flags.F)},seq:{seq:05},ack:{ack:05},win:{win:07},data_len:{len(tcp.payload)}"
 
     # SACK option: (left1, right1, left2, right2, ...), right edge excluded
     for name, value in tcp.options:
