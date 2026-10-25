@@ -26,6 +26,15 @@ Start `tcp_server.py` in the server terminal. Leave it running for all the exerc
 
 On Linux the sniffers need root: start them with `sudo $(which python)` instead of `python`.
 
+> [!WARNING]
+> ⚠️ **Linux shows every loopback packet twice.** On Linux the interface `lo` passes each packet to the sniffer two times: when it leaves and when it comes back in. Without care, every line of the output appears twice.
+>
+> The sniffers already handle it: on Linux their capture filter is `tcp port 12000 and inbound`, which keeps only the incoming copy. If you capture on `lo` with your own script or with `tcpdump`, add `and inbound` too:
+> ```
+> sudo tcpdump -i lo -n 'tcp port 12000 and inbound'
+> ```
+> macOS (`lo0`) does not have this problem.
+
 ---
 
 ## Emulator (sudo)
