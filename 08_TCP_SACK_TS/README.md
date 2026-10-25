@@ -2,98 +2,228 @@
 
 Kurose & Ross, Ch. 3: Sec. 3.4.3 (GBN, SR), Sec. 3.5.3 (RTT, timeout).
 
-Real kernel TCP on the loopback. An emulator loses the data and delays the ACKs. Two Scapy sniffers show the options.
+A client sends a stream to a server on your own machine (loopback). An emulator in the middle loses data packets and delays ACKs. A Scapy sniffer prints the TCP header of every packet.
 
 ![Emulated channel](img/channel.svg)
 
-The sniffer sees each packet when it comes out of the channel, so lost packets never reach it. The data has no delay, so RTT = ACK delay.
+The sniffer sees each packet when it comes out of the channel: lost packets never reach it. Data has no delay, so RTT = ACK delay.
 
-- `tcp_server.py`: port 12000, reads everything.
-- `tcp_client.py`: `--n` chunks of `--size` bytes (also the MSS, default 1000), one every `--interval` s (0 = all at once).
-- `01_sack_sniffer.py`: one line per TCP header (flags, seq, ack, length), with the SACK blocks.
-- `02_rto_sniffer.py`: SampleRTT from the timestamps, then EstimatedRTT, DevRTT, RTO.
+| File | What it does |
+|---|---|
+| `tcp_server.py` | receives everything on port 12000 |
+| `tcp_client.py` | sends `--n` chunks of `--size` bytes (default 1000), one every `--interval` seconds |
+| `01_sack_sniffer.py` | one line per packet: flags, `seq`, `ack`, `win`, length, SACK blocks |
+| `02_01_ts_sniffer.py` | one line per packet: flags, `seq`, `ack`, length, `TSval`, `TSecr` |
+| `02_02_rto_sniffer.py` | the same as `02_01`, plus the `RTO` column |
 
-Panes: server, client, sniffer. On Linux the sniffer needs sudo.
+---
 
-## Emulator (sudo)
+## 0. Setup (once)
 
-Data (to port 12000): loss. ACKs (from port 12000): delay. RTT = ACK delay.
+**Step 1.** Open three terminal panes: **left** the server, **middle** the sniffer, **right** the client.
 
-Linux / WSL:
+**Step 2.** Start the emulator. It needs `sudo`. All values start at 0 (no loss, no delay).
+
+**Linux / WSL**
 ```
 sudo ethtool -K lo tso off gso off
 sudo tc qdisc add dev lo root handle 1: prio
-sudo tc qdisc add dev lo parent 1:1 handle 10: netem loss 5%
+sudo tc qdisc add dev lo parent 1:1 handle 10: netem loss 0%
 sudo tc qdisc add dev lo parent 1:3 handle 30: netem delay 0ms
 sudo tc filter add dev lo parent 1: protocol ip u32 match ip dport 12000 0xffff flowid 1:1
 sudo tc filter add dev lo parent 1: protocol ip u32 match ip sport 12000 0xffff flowid 1:3
 ```
-Change: `sudo tc qdisc change dev lo parent 1:1 handle 10: netem loss 10%` (data), `sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 100ms` (ACKs).
-Stop: `sudo tc qdisc del dev lo root; sudo ethtool -K lo tso on gso on`
 
-macOS:
+**macOS**
 ```
-sudo dnctl pipe 1 config plr 0.05
+sudo dnctl pipe 1 config plr 0
 sudo dnctl pipe 2 config delay 0
 printf "dummynet out on lo0 proto tcp from any to any port 12000 pipe 1\ndummynet out on lo0 proto tcp from any port 12000 to any pipe 2\n" | sudo pfctl -f -
 sudo pfctl -e
 ```
-Change: `sudo dnctl pipe 1 config plr 0.1` (data), `sudo dnctl pipe 2 config delay 100` (ACKs).
-Stop: `sudo pfctl -f /etc/pf.conf; sudo pfctl -d; sudo dnctl -q flush`
+On macOS `pfctl` prints some warnings (`flushing of rules`, `No ALTQ`): they are normal.
+
+**Step 3.** Start `tcp_server.py` in the left pane. Leave it running for all the exercises.
+
+**Step 4. Check that the emulator works.** Do not skip this step: if the emulator is off, nothing in the exercises will make sense.
+
+Set an ACK delay of 500 ms:
+
+Linux / WSL:
+```
+sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 500ms
+```
+macOS:
+```
+sudo dnctl pipe 2 config delay 500
+```
+Start `tcp_client.py --n 10 --interval 0` in the right pane.
+
+**Client output** (emulator working)
+```
+MSS: 1000 bytes
+handed 10 chunks of 1000 bytes to TCP in 0.00 s
+all data delivered after 0.50 s
+```
+The second time must be **about 0.5 s larger** than the first one: the ACKs wait 500 ms in the emulator.
+
+If both times are `0.00 s`, the emulator is **not** active: run the commands of Step 2 again, then repeat Step 4. This happens on macOS after every reboot, and every time you run the "stop" commands of section 4.
+
+When it works, set the ACK delay back to 0:
+
+Linux / WSL:
+```
+sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 0ms
+```
+macOS:
+```
+sudo dnctl pipe 2 config delay 0
+```
+
+On Linux the sniffers need root: start them with `sudo $(which python)` instead of `python`.
 
 ---
 
 ## 1. SACK
 
-Emulator: data **loss 20 %**. Start `01_sack_sniffer.py`, then the client with `--n 10 --interval 0.1`. Losses are random: each run is different.
+**Step 1.** Set the emulator: data **loss 20 %**, ACK delay 0.
 
-One line per TCP header: time from the start (ms), ports, flags (`S` SYN, `A` ACK, `F` FIN), relative `seq` / `ack`, payload length. An ACK with the SACK option adds its blocks: `SLE` = first byte, `SRE` = last byte + 1.
+Linux / WSL:
+```
+sudo tc qdisc change dev lo parent 1:1 handle 10: netem loss 20%
+sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 0ms
+```
+macOS:
+```
+sudo dnctl pipe 1 config plr 0.2
+sudo dnctl pipe 2 config delay 0
+```
 
-**Sniffer output** (real run, macOS, heavy loss)
+**Step 2.** Start `01_sack_sniffer.py` in the middle pane.
+
+**Step 3.** Start `tcp_client.py --n 10 --interval 0.1` in the right pane.
+
+**Step 4.** Read the sniffer output. Losses are random: every run is different.
+
+Each field of a line:
+- `ts`: ms since the start of the connection
+- `S`, `A`, `F`: flags SYN, ACK, FIN
+- `seq`, `ack`: relative numbers (the first data byte is 1)
+- `win`: receive window of the sender of the packet, in bytes
+- `SACK,SLE:x,SRE:y`: the receiver **has** bytes x … y-1 (out of order)
+
+Example (real run, Linux):
 ```
-ts:00334,SPORT:63821,DPORT:12000,S:0,A:1,F:0,seq:03001,ack:00001,data_len:1000
-ts:00439,SPORT:63821,DPORT:12000,S:0,A:1,F:0,seq:04001,ack:00001,data_len:1000
-ts:00485,SPORT:63821,DPORT:12000,S:0,A:1,F:0,seq:00001,ack:00001,data_len:1000
-ts:00486,SPORT:12000,DPORT:63821,S:0,A:1,F:0,seq:00001,ack:01001,data_len:0,SACK,SLE:03001,SRE:05001
-ts:00786,SPORT:63821,DPORT:12000,S:0,A:1,F:0,seq:01001,ack:00001,data_len:1000
-ts:01786,SPORT:63821,DPORT:12000,S:0,A:1,F:0,seq:01001,ack:00001,data_len:1000
-ts:04588,SPORT:63821,DPORT:12000,S:0,A:1,F:0,seq:01001,ack:00001,data_len:1000
-ts:04588,SPORT:12000,DPORT:63821,S:0,A:1,F:0,seq:00001,ack:02001,data_len:0,SACK,SLE:01001,SRE:02001,SLE:03001,SRE:05001
-ts:05842,SPORT:63821,DPORT:12000,S:0,A:1,F:0,seq:02001,ack:00001,data_len:1000
-ts:05843,SPORT:12000,DPORT:63821,S:0,A:1,F:0,seq:00001,ack:05001,data_len:0
+ts:00207,SPORT:47846,DPORT:12000,S:0,A:1,F:0,seq:02001,ack:00001,win:0064768,data_len:1000
+ts:00207,SPORT:12000,DPORT:47846,S:0,A:1,F:0,seq:00001,ack:03001,win:0065664,data_len:0
+ts:00414,SPORT:47846,DPORT:12000,S:0,A:1,F:0,seq:04001,ack:00001,win:0064768,data_len:1000
+ts:00414,SPORT:12000,DPORT:47846,S:0,A:1,F:0,seq:00001,ack:03001,win:0065664,data_len:0,SACK,SLE:04001,SRE:05001
+ts:00414,SPORT:47846,DPORT:12000,S:0,A:1,F:0,seq:03001,ack:00001,win:0064768,data_len:1000
+ts:00414,SPORT:12000,DPORT:47846,S:0,A:1,F:0,seq:00001,ack:05001,win:0064640,data_len:0
 ```
-- `ack:01001` + `SLE:03001,SRE:05001`: the receiver has 1-1000, **misses 1001-3000**, has 3001-5000 (kept out of order, as in SR).
-- `seq:01001` is sent again and again: each time the RTO doubles (≈ 1 s, then ≈ 3 s).
-- `SLE:01001,SRE:02001` is below `ack:02001`: a **D-SACK**, "I got 1001-2000 twice" (an earlier copy arrived, its ACK was lost).
-- The sender sends again **only the hole** 2001-3000, GBN would send everything from 2001. Then the ACK jumps to 5001.
+
+What to find in your output:
+- A **missing** segment: here `seq:03001` never appears after `seq:02001` (the emulator dropped it).
+- An ACK with SACK: `ack:03001` = first missing byte, `SLE:04001,SRE:05001` = what arrived after the hole. The receiver has 1-3000, **misses 3001-4000**, has 4001-5000.
+- The sender sends again **only the missing segment** `seq:03001` (as in SR, not GBN).
+- After the hole is filled, `ack` **jumps** to 5001.
 
 ---
 
-## 2. Timestamps: Karn and Jacobson
+## 2. Timestamps
 
-Emulator: data **loss 10 %**, ACK **delay 100 ms**. Start `02_rto_sniffer.py`, then the client with `--n 400 --interval 0.05`.
+**Step 1.** Set the emulator: no loss, ACK **delay 100 ms**.
 
-`SampleRTT` = time of the ACK - time of the segment whose `TSval` the ACK copies in `TSecr`.
-
-What to look for (example values):
+Linux / WSL:
 ```
-    t(ms)  pkt  seq/ack      TSval      TSecr  Sample  EstRTT  DevRTT     RTO
-   1205.3  DATA    5001       1100
-   1505.3  DATA    5001       1400              RETX: by seq ambiguous (Karn), by TSval ok
-   1605.4  ACK     6001                  1400   100.1   101.2     4.3   118.4   <- of the RETX
+sudo tc qdisc change dev lo parent 1:1 handle 10: netem loss 0%
+sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 100ms
 ```
-**Karn**: by seq number the ACK of a retransmission may belong to either copy, so TCP skips the sample and doubles the timeout. With `TSecr` it is clear which copy came back.
+macOS:
+```
+sudo dnctl pipe 1 config plr 0
+sudo dnctl pipe 2 config delay 100
+```
 
-**Jacobson** (the sniffer's columns):
+**Step 2.** Stop the sniffer (Ctrl+C) and start `02_01_ts_sniffer.py` in the middle pane.
+
+**Step 3.** Start `tcp_client.py --n 10 --interval 0.1` in the right pane.
+
+**Step 4.** Read the two new fields:
+- `TSval`: clock of the sender when it sent the packet (ms)
+- `TSecr`: the `TSval` of the other side, copied back
+
+Example (real run, macOS):
+```
+ts:121.05,SPORT:59671,DPORT:12000,S:0,A:1,F:0,seq:01001,ack:00001,data_len:1000,TSval:00121,TSecr:00019
+ts:221.31,SPORT:12000,DPORT:59671,S:0,A:1,F:0,seq:00001,ack:02001,data_len:0,TSval:00121,TSecr:00121
+ts:222.74,SPORT:59671,DPORT:12000,S:0,A:1,F:0,seq:02001,ack:00001,data_len:1000,TSval:00223,TSecr:00121
+ts:323.58,SPORT:12000,DPORT:59671,S:0,A:1,F:0,seq:00001,ack:03001,data_len:0,TSval:00223,TSecr:00223
+```
+
+What to find in your output:
+- The data segment `seq:01001` leaves with `TSval:00121`.
+- Its ACK (`ack:02001`) carries `TSecr:00121`: the same number, copied back.
+- Between the two lines `ts` grows by ≈ 100 ms (121 → 221): that is the RTT the sender measures, `SampleRTT = now - TSecr`.
+
+---
+
+## 3. RTO
+
+**Step 1.** Keep the emulator as in exercise 2 (ACK delay 100 ms).
+
+**Step 2.** Stop the sniffer (Ctrl+C) and start `02_02_rto_sniffer.py` in the middle pane.
+
+**Step 3.** Start `tcp_client.py --n 20 --interval 0.1` in the right pane.
+
+**Step 4.** Look at the last column, `RTO` (ms). It is computed from each `SampleRTT` with Jacobson's formulas (Kurose Sec. 3.5.3):
 ```
 EstimatedRTT    = 7/8 · EstimatedRTT + 1/8 · SampleRTT
 DevRTT          = 3/4 · DevRTT + 1/4 · |SampleRTT - EstimatedRTT|
 TimeoutInterval = EstimatedRTT + 4 · DevRTT
 ```
 
-While the client is sending, change the ACK delay to **300 ms**. `Sample` jumps at once. `EstRTT` climbs slowly (1/8 per sample). `DevRTT` and `RTO` grow at once, so there is no early timeout.
+Example (real run, macOS, only the ACK lines):
+```
+ts:119.44,SPORT:12000,DPORT:59671,S:0,A:1,F:0,seq:00001,ack:01001,data_len:0,TSval:00019,TSecr:00019,RTO:00301.3
+ts:221.31,SPORT:12000,DPORT:59671,S:0,A:1,F:0,seq:00001,ack:02001,data_len:0,TSval:00121,TSecr:00121,RTO:00251.2
+ts:323.58,SPORT:12000,DPORT:59671,S:0,A:1,F:0,seq:00001,ack:03001,data_len:0,TSval:00223,TSecr:00223,RTO:00213.9
+ts:428.57,SPORT:12000,DPORT:59671,S:0,A:1,F:0,seq:00001,ack:04001,data_len:0,TSval:00328,TSecr:00328,RTO:00185.6
+...
+ts:2086.63,SPORT:12000,DPORT:59671,S:0,A:1,F:0,seq:00001,ack:20001,data_len:0,TSval:01987,TSecr:01987,RTO:00103.7
+```
 
-Compare with the kernel (Linux): `ss -ti dport = :12000` → `rtt:EstRTT/DevRTT rto:RTO` in ms (Linux keeps `rto` ≥ 200 ms).
+What to find in your output:
+- Before the first ACK, `RTO` = 1000 (1 s, the starting value).
+- At each ACK the `RTO` goes down: 301, 251, 214, 186 … until ≈ 104 ms, close to the real RTT (100 ms).
+
+**Step 5.** Start the client again with `--n 100 --interval 0.1`. While it is sending, raise the ACK delay to 300 ms:
+
+Linux / WSL:
+```
+sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 300ms
+```
+macOS:
+```
+sudo dnctl pipe 2 config delay 300
+```
+The `RTO` goes up quickly, then settles close to 300 ms.
+
+---
+
+## 4. Stop the emulator
+
+Linux / WSL:
+```
+sudo tc qdisc del dev lo root
+sudo ethtool -K lo tso on gso on
+```
+macOS:
+```
+sudo pfctl -f /etc/pf.conf
+sudo pfctl -d
+sudo dnctl -q flush
+```
 
 ---
 

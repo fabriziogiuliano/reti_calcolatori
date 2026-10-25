@@ -26,7 +26,8 @@ sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 # the kernel refuses a too small MSS: use at least 536, the classic default
 MSS = max(SIZE, 536)
 try:
-    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_MAXSEG, MSS)    # Linux: before connect
+    # Linux: before connect, +12 bytes for the Timestamps option that it takes from each segment
+    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_MAXSEG, MSS + 12)
     sock.connect(SERVER)
 except OSError:
     sock.connect(SERVER)
