@@ -18,13 +18,27 @@ The sniffer sees each packet when it comes out of the channel: lost packets neve
 
 ---
 
-## 0. Setup (once)
+## Setup
 
-**Step 1.** Open three terminal panes: **left** the server, **middle** the sniffer, **right** the client.
+Open three terminals (windows, tabs or tmux panes: as you like): one for the **server**, one for the **sniffer**, one for the **client**.
 
-**Step 2.** Start the emulator. It needs `sudo`. All values start at 0 (no loss, no delay).
+Start `tcp_server.py` in the server terminal. Leave it running for all the exercises.
 
-**Linux / WSL**
+On Linux the sniffers need root: start them with `sudo $(which python)` instead of `python`.
+
+---
+
+## Emulator (sudo)
+
+The emulator makes data packets (to port 12000) lossy and ACKs (from port 12000) slow. All its commands need `sudo`.
+
+> **Preview.** Here `tc` (Linux) and `dnctl` (macOS) are only a tool: copy the commands as they are. We will study network emulation in much more detail later in the course.
+
+Read **only the part for your system**.
+
+### Linux / WSL
+
+**Start** (once). All values start at 0: no loss, no delay.
 ```
 sudo ethtool -K lo tso off gso off
 sudo tc qdisc add dev lo root handle 1: prio
@@ -34,30 +48,52 @@ sudo tc filter add dev lo parent 1: protocol ip u32 match ip dport 12000 0xffff 
 sudo tc filter add dev lo parent 1: protocol ip u32 match ip sport 12000 0xffff flowid 1:3
 ```
 
-**macOS**
+**Change** loss and delay (here: data loss 20 %, ACK delay 100 ms). Each exercise tells you the values.
+```
+sudo tc qdisc change dev lo parent 1:1 handle 10: netem loss 20%
+sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 100ms
+```
+The first line sets the data loss, the second one the ACK delay.
+
+**Stop** (at the end).
+```
+sudo tc qdisc del dev lo root
+sudo ethtool -K lo tso on gso on
+```
+Details: [man tc](https://man7.org/linux/man-pages/man8/tc.8.html).
+
+### macOS
+
+**Start** (once). All values start at 0: no loss, no delay.
 ```
 sudo dnctl pipe 1 config plr 0
 sudo dnctl pipe 2 config delay 0
 printf "dummynet out on lo0 proto tcp from any to any port 12000 pipe 1\ndummynet out on lo0 proto tcp from any port 12000 to any pipe 2\n" | sudo pfctl -f -
 sudo pfctl -e
 ```
-On macOS `pfctl` prints some warnings (`flushing of rules`, `No ALTQ`): they are normal.
+`pfctl` prints some warnings (`flushing of rules`, `No ALTQ`): they are normal.
 
-**Step 3.** Start `tcp_server.py` in the left pane. Leave it running for all the exercises.
+**Change** loss and delay (here: data loss 20 %, ACK delay 100 ms). Each exercise tells you the values.
+```
+sudo dnctl pipe 1 config plr 0.2
+sudo dnctl pipe 2 config delay 100
+```
+The first line sets the data loss (`plr` = packet loss rate, from 0 to 1), the second one the ACK delay (ms).
 
-**Step 4. Check that the emulator works.** Do not skip this step: if the emulator is off, nothing in the exercises will make sense.
+**Stop** (at the end).
+```
+sudo pfctl -f /etc/pf.conf
+sudo pfctl -d
+sudo dnctl -q flush
+```
+Details: [man dnctl](https://keith.github.io/xcode-man-pages/dnctl.8.html).
 
-Set an ACK delay of 500 ms:
+### Check that it works
 
-Linux / WSL:
-```
-sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 500ms
-```
-macOS:
-```
-sudo dnctl pipe 2 config delay 500
-```
-Start `tcp_client.py --n 10 --interval 0` in the right pane.
+Do not skip this check: if the emulator is off, nothing in the exercises will make sense.
+
+1. With the **Change** commands of your system, set an ACK delay of **500 ms** (loss 0).
+2. Start `tcp_client.py --n 10 --interval 0` in the client terminal.
 
 **Client output** (emulator working)
 ```
@@ -67,41 +103,19 @@ all data delivered after 0.50 s
 ```
 The second time must be **about 0.5 s larger** than the first one: the ACKs wait 500 ms in the emulator.
 
-If both times are `0.00 s`, the emulator is **not** active: run the commands of Step 2 again, then repeat Step 4. This happens on macOS after every reboot, and every time you run the "stop" commands of section 4.
+If both times are `0.00 s`, the emulator is **not** active: run the **Start** commands again and repeat the check. On macOS this happens after every reboot, and after the **Stop** commands.
 
-When it works, set the ACK delay back to 0:
-
-Linux / WSL:
-```
-sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 0ms
-```
-macOS:
-```
-sudo dnctl pipe 2 config delay 0
-```
-
-On Linux the sniffers need root: start them with `sudo $(which python)` instead of `python`.
+3. When it works, set the ACK delay back to **0**.
 
 ---
 
 ## 1. SACK
 
-**Step 1.** Set the emulator: data **loss 20 %**, ACK delay 0.
+**Step 1.** With the **Change** commands of your system, set: data loss **20 %**, ACK delay **0**.
 
-Linux / WSL:
-```
-sudo tc qdisc change dev lo parent 1:1 handle 10: netem loss 20%
-sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 0ms
-```
-macOS:
-```
-sudo dnctl pipe 1 config plr 0.2
-sudo dnctl pipe 2 config delay 0
-```
+**Step 2.** Start `01_sack_sniffer.py` in the sniffer terminal.
 
-**Step 2.** Start `01_sack_sniffer.py` in the middle pane.
-
-**Step 3.** Start `tcp_client.py --n 10 --interval 0.1` in the right pane.
+**Step 3.** Start `tcp_client.py --n 10 --interval 0.1` in the client terminal.
 
 **Step 4.** Read the sniffer output. Losses are random: every run is different.
 
@@ -132,22 +146,11 @@ What to find in your output:
 
 ## 2. Timestamps
 
-**Step 1.** Set the emulator: no loss, ACK **delay 100 ms**.
+**Step 1.** With the **Change** commands of your system, set: data loss **0**, ACK delay **100 ms**.
 
-Linux / WSL:
-```
-sudo tc qdisc change dev lo parent 1:1 handle 10: netem loss 0%
-sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 100ms
-```
-macOS:
-```
-sudo dnctl pipe 1 config plr 0
-sudo dnctl pipe 2 config delay 100
-```
+**Step 2.** Stop the sniffer (Ctrl+C) and start `02_01_ts_sniffer.py` in the sniffer terminal.
 
-**Step 2.** Stop the sniffer (Ctrl+C) and start `02_01_ts_sniffer.py` in the middle pane.
-
-**Step 3.** Start `tcp_client.py --n 10 --interval 0.1` in the right pane.
+**Step 3.** Start `tcp_client.py --n 10 --interval 0.1` in the client terminal.
 
 **Step 4.** Read the two new fields:
 - `TSval`: clock of the sender when it sent the packet (ms)
@@ -172,9 +175,9 @@ What to find in your output:
 
 **Step 1.** Keep the emulator as in exercise 2 (ACK delay 100 ms).
 
-**Step 2.** Stop the sniffer (Ctrl+C) and start `02_02_rto_sniffer.py` in the middle pane.
+**Step 2.** Stop the sniffer (Ctrl+C) and start `02_02_rto_sniffer.py` in the sniffer terminal.
 
-**Step 3.** Start `tcp_client.py --n 20 --interval 0.1` in the right pane.
+**Step 3.** Start `tcp_client.py --n 20 --interval 0.1` in the client terminal.
 
 **Step 4.** Look at the last column, `RTO` (ms). It is computed from each `SampleRTT` with Jacobson's formulas (Kurose Sec. 3.5.3):
 ```
@@ -197,34 +200,14 @@ What to find in your output:
 - Before the first ACK, `RTO` = 1000 (1 s, the starting value).
 - At each ACK the `RTO` goes down: 301, 251, 214, 186 … until ≈ 104 ms, close to the real RTT (100 ms).
 
-**Step 5.** Start the client again with `--n 100 --interval 0.1`. While it is sending, raise the ACK delay to 300 ms:
-
-Linux / WSL:
-```
-sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 300ms
-```
-macOS:
-```
-sudo dnctl pipe 2 config delay 300
-```
-The `RTO` goes up quickly, then settles close to 300 ms.
+**Step 5.** Start the client again with `--n 100 --interval 0.1`. While it is sending, raise the ACK delay to **300 ms** (Change commands of your system). The `RTO` goes up quickly, then settles close to 300 ms.
 
 ---
 
-## 4. Stop the emulator
+## References
 
-Linux / WSL:
-```
-sudo tc qdisc del dev lo root
-sudo ethtool -K lo tso on gso on
-```
-macOS:
-```
-sudo pfctl -f /etc/pf.conf
-sudo pfctl -d
-sudo dnctl -q flush
-```
-
----
-
-Docs: [RFC 2018 (SACK)](https://www.rfc-editor.org/rfc/rfc2018), [RFC 7323 (Timestamps)](https://www.rfc-editor.org/rfc/rfc7323), [RFC 6298 (RTO)](https://www.rfc-editor.org/rfc/rfc6298), [tc-netem](https://man7.org/linux/man-pages/man8/tc-netem.8.html), [dnctl](https://keith.github.io/xcode-man-pages/dnctl.8.html), [Scapy sniff](https://scapy.readthedocs.io/en/latest/usage.html#sniffing).
+For the curious, to study the details:
+- [RFC 2018](https://www.rfc-editor.org/rfc/rfc2018): the SACK option
+- [RFC 7323](https://www.rfc-editor.org/rfc/rfc7323): the Timestamps and Window Scale options
+- [RFC 6298](https://www.rfc-editor.org/rfc/rfc6298): how TCP computes the RTO
+- [Scapy, sniffing](https://scapy.readthedocs.io/en/latest/usage.html#sniffing): the `sniff()` function used by the sniffers

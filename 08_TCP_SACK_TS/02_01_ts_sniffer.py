@@ -5,9 +5,13 @@ import sys
 from scapy.all import sniff, TCP
 
 PORT = 12000
-IFACE = "lo0" if sys.platform == "darwin" else "lo"
-# Linux sees each loopback packet twice (out and in): keep only the incoming copy
-FILTER = "tcp port %d" % PORT if sys.platform == "darwin" else "tcp port %d and inbound" % PORT
+if sys.platform == "darwin":                # macOS
+    IFACE = "lo0"
+    FILTER = "tcp port %d" % PORT
+else:                                       # Linux
+    IFACE = "lo"
+    # Linux sees each loopback packet twice (out and in): keep only the incoming copy
+    FILTER = "tcp port %d and inbound" % PORT
 
 isn_c = 0      # ISN of the client (from the SYN)
 isn_s = 0      # ISN of the server (from the SYN-ACK)
