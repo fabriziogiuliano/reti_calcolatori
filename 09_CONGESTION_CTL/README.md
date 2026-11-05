@@ -6,7 +6,11 @@ A client sends as fast as it can to a server on your own machine (loopback). An 
 
 ![Emulated channel](img/channel.svg)
 
-Data waits in the queue and leaves at 10 Mbit/s. ACKs are delayed by 100 ms, so RTT ≈ 100 ms.
+- **Data**: router queue (50 packets), then the link (10 Mbit/s). This is the queue of the textbook: it fills up and drops packets.
+- **ACKs**: the same router queue and link (a real link has both directions), then the cable (100 ms). ACKs are small (52 bytes against 1052): their queue stays almost always empty.
+- The cable holds every packet in flight: in the emulator we give it room for ≈ 1500 packets, in practice unlimited.
+
+RTT ≈ 100 ms.
 
 | File | What it does |
 |---|---|
@@ -44,7 +48,7 @@ Start `tcp_server.py` in the server terminal. Leave it running for all the exerc
 
 ## Emulator (sudo)
 
-The emulator gives the data packets (to port 12000) a 10 Mbit/s link with a queue of 50 packets, and delays the ACKs (from port 12000) by 100 ms. All its commands need `sudo`.
+The emulator gives the data packets (to port 12000) a queue of 50 packets and a 10 Mbit/s link; the ACKs (from port 12000) get the same queue and link, then a cable of 100 ms with room for ≈ 1500 packets. All its commands need `sudo`.
 
 > **Preview.** Here `tc` (Linux) and `dnctl` (macOS) are only a tool: copy the commands as they are. We will study network emulation in much more detail later in the course.
 
@@ -60,11 +64,12 @@ Read **only the part for your system**.
 sudo ethtool -K lo tso off gso off
 sudo tc qdisc add dev lo root handle 1: prio
 sudo tc qdisc add dev lo parent 1:1 handle 10: netem rate 10mbit limit 50
-sudo tc qdisc add dev lo parent 1:3 handle 30: netem delay 100ms
+sudo tc qdisc add dev lo parent 1:3 handle 30: netem delay 100ms limit 1500
+sudo tc qdisc add dev lo parent 30:1 handle 31: tbf rate 10mbit burst 1540 limit 52000
 sudo tc filter add dev lo parent 1: protocol ip u32 match ip dport 12000 0xffff flowid 1:1
 sudo tc filter add dev lo parent 1: protocol ip u32 match ip sport 12000 0xffff flowid 1:3
 ```
-`rate` is the link speed, `limit` the queue size (packets), `delay` the ACK delay.
+Data: `limit 50` is the router queue (packets), `rate` the link speed. ACKs: `netem delay 100ms limit 1500` is the cable (room for 1500 packets), then `tbf` is the link (`rate`) with its router queue (`limit`, in bytes: 52000 ≈ 50 packets).
 
 **Change: random loss** (only for exercise 4).
 
@@ -90,11 +95,11 @@ Details: [man tc-netem](https://man7.org/linux/man-pages/man8/tc-netem.8.html).
 **Start** (once).
 ```
 sudo dnctl pipe 1 config bw 10Mbit/s queue 50
-sudo dnctl pipe 2 config delay 100
+sudo dnctl pipe 2 config bw 10Mbit/s queue 50 delay 100
 printf "dummynet out on lo0 proto tcp from any to any port 12000 pipe 1\ndummynet out on lo0 proto tcp from any port 12000 to any pipe 2\n" | sudo pfctl -f -
 sudo pfctl -e
 ```
-`bw` is the link speed, `queue` the queue size (packets), `delay` the ACK delay (ms). `pfctl` prints some warnings (`flushing of rules`, `No ALTQ`): they are normal.
+In a dummynet pipe a packet goes through the router queue (`queue`, packets), then the link (`bw`), then the cable (`delay`, ms; it has no size limit). Pipe 1 = data, pipe 2 = ACKs. `pfctl` prints some warnings (`flushing of rules`, `No ALTQ`): they are normal.
 
 **Change: random loss** (only for exercise 4).
 
