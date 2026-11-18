@@ -274,6 +274,17 @@ Until now each algorithm had the bottleneck all for itself. Two connections can 
 
 **Step 2.** Start `plot_cwnd.py reno_mix.csv cubic_mix.csv --out mix.png`, then `plot_thr.py reno_mix.csv cubic_mix.csv --link 10 --out mix_thr.png`. Both clients write absolute time: in the plot the two curves line up, even if one client started a few seconds later.
 
+Real run (Linux, default channel): NewReno alone for 20 s, then Cubic joins, then Cubic alone.
+
+![cwnd, NewReno and Cubic sharing the link](img/mix_cwnd.svg)
+
+![throughput, NewReno and Cubic sharing the link](img/mix_thr.svg)
+
+What to find in the plots:
+- Alone, each flow fills the link (≈ 9.38 Mbit/s).
+- Together the sum stays ≈ 9.38 Mbit/s: the link is still full, but shared.
+- The share is not fair: NewReno halves at each loss and grows by 1 per RTT, Cubic falls only to 0.7 and climbs back faster. Here, from 20 to 40 s, Cubic got ≈ 5.4 Mbit/s and NewReno ≈ 4.0, and at the end ≈ 7 against 2.5.
+
 The two flows now compete for the same queue: how they share the link is the topic of **TCP fairness** (Kurose Sec. 3.7.2).
 
 ---
@@ -315,15 +326,42 @@ What to find:
 - Cubic reads every lost packet as congestion: its `cwnd` stays small and the throughput falls to a small part of the link.
 - BBR does not use loss as a signal: it keeps sending at the rate it measured, and the throughput stays close to the link.
 
-**Step 5: together (optional).** Back to `./emulate_channel.sh start`. As in exercise 5, start a Cubic client and, 20 s later, a BBR client:
+**Step 5: together (optional).** Cubic and BBR start **at the same moment** on the same router queue. Who gets more of the link depends on the size of the queue compared with the BDP (≈ 117 packets on the default channel): try a small, a medium and a large queue.
+
+| queue | `QUEUE` | compared with the BDP |
+|---|---|---|
+| small | 50 | ≈ 0.4 BDP |
+| medium | 350 | ≈ 3 BDP |
+| large | 1000 | ≈ 8.5 BDP (use `--time 120`: a full queue adds ≈ 850 ms to the RTT) |
+
+For each queue size, set `QUEUE` in the first line and run:
 ```bash
-python cwnd_client.py --cc cubic --time 40 --out cubic_mix.csv > /dev/null &
-sleep 20
-python cwnd_client.py --cc bbr   --time 40 --out bbr_mix.csv > /dev/null
+QUEUE=50
+
+QUEUE=$QUEUE ./emulate_channel.sh start
+
+python cwnd_client.py --cc cubic --time 60 --out q${QUEUE}_cubic.csv > /dev/null &
+python cwnd_client.py --cc bbr   --time 60 --out q${QUEUE}_bbr.csv   > /dev/null
 wait
-python plot_thr.py cubic_mix.csv bbr_mix.csv --link 10 --out bbr_mix_thr.png
+
+python plot_thr.py  q${QUEUE}_cubic.csv q${QUEUE}_bbr.csv --link 10 --out q${QUEUE}_thr.png
+python plot_cwnd.py q${QUEUE}_cubic.csv q${QUEUE}_bbr.csv           --out q${QUEUE}_cwnd.png
 ```
-Cubic fills the queue, BBR does not use the queue as a signal: who gets more of the link? It depends on the size of the queue. Try again with `QUEUE=500 ./emulate_channel.sh start`.
+`&` starts Cubic in the background, so the two clients start together; `wait` waits for it before plotting. Write `${QUEUE}` with braces: `$QUEUE_cubic` would be read as a variable named `QUEUE_cubic`. Start one run only when the previous one is over: a client left running is a third flow on the link.
+
+Real run (Linux): Cubic and BBR started **at the same moment**, router queue of 50 packets (≈ 0.4 BDP).
+
+![throughput, Cubic and BBR, queue 50](img/q50_thr.svg)
+
+![cwnd, Cubic and BBR, queue 50](img/q50_cwnd.svg)
+
+![RTT, Cubic and BBR, queue 50](img/q50_rtt.svg)
+
+What to find in the plots:
+- **Throughput**: BBR ≈ 7.6 Mbit/s, Cubic ≈ 1.5 Mbit/s. With a small queue BBR takes most of the link.
+- **`cwnd`**: BBR flat at ≈ 230 = 2 × BDP, its cap; Cubic squeezed down to ≈ 20–30. The channel holds only BDP + 50 ≈ 167 packets: BBR alone wants more, the queue overflows all the time, and only Cubic backs off at the losses.
+- **RTT**: both ≈ 150–180 ms, far above the 100 ms of the cable: the queue is always full.
+- **ProbeRTT**: every 10 s the `cwnd` of BBR drops to 4 for ≈ 200 ms, its throughput dips and the RTT goes back near 100 ms for a moment.
 
 **Step 6.** Back to the default channel: `./emulate_channel.sh start`.
 
