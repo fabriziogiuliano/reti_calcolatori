@@ -18,6 +18,7 @@ case "$1" in
 start)
     sudo tc qdisc del dev lo root 2>/dev/null    # remove old settings, if any
     sudo ethtool -K lo tso off gso off           # real segments, not 64 KB blocks
+    sudo modprobe tcp_bbr                        # make BBR available to cwnd_client.py --cc bbr
     sudo tc qdisc add dev lo root handle 1: prio
     # data: router queue + link (+ random loss)
     sudo tc qdisc add dev lo parent 1:1 handle 10: netem rate $RATE limit $QUEUE loss $LOSS

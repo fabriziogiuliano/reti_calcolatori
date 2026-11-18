@@ -17,18 +17,18 @@ RTT ≈ 100 ms.
 | `emulate_channel.sh` | **the channel** (Linux): link speed, delay, loss, queue; `start`, `show`, `stop` |
 | `tcp_server.py` | receives everything on port 12000, from many clients at the same time |
 | `cwnd_client.py` | sends for `--time` seconds; every `--every` seconds prints and saves `time,cwnd,ssthresh,rtt,bytes` |
-| `plot_cwnd_overlay.py` | overlays experiments run **one after the other**: each file starts at its own time 0; draws in `--out` (default `cwnd_overlay.png`; also `.svg`, `.pdf`) |
-| `plot_cwnd.py` | draws clients that ran **at the same time**, on their real time; draws in `--out` (default `cwnd.png`) |
+| `plot_cwnd.py` | draws the `cwnd` of one or more CSV files in `--out` (default `cwnd.png`; also `.svg`, `.pdf`), on the real (absolute) time |
+| `plot_rtt.py` | draws the **RTT** (ms) of one or more CSV files in `--out` (default `rtt.png`), on the real time; `--delay 100` also draws the cable delay |
 | `plot_thr.py` | draws the **throughput** (Mbit/s) of one or more CSV files in `--out` (default `thr.png`), on the real (absolute) time; `--link 10` also draws the link capacity (Mbit/s) |
 
 | Option | What it does (default) |
 |---|---|
-| `--cc` | algorithm, `reno` or `cubic`, **Linux only** (cubic) |
+| `--cc` | algorithm, `reno`, `cubic` or `bbr`, **Linux only** (cubic) |
 | `--time` | seconds of sending (30) |
 | `--every` | seconds between two samples (0.05) |
 | `--out` | CSV file for the samples (cwnd.csv) |
 
-Output columns: `time` = absolute time ([Unix time](https://docs.python.org/3/library/time.html#time.time): seconds since 1 Jan 1970), `cwnd` and `ssthresh` in segments (MSS = 1000 bytes), `rtt` = smoothed RTT in ms, `bytes` = bytes delivered so far (Linux: acked by the server; macOS: sent minus retransmitted). `plot_cwnd_overlay.py` puts time 0 at the first sample of each file; `plot_cwnd.py` at the first sample of all its files. Before the first loss `ssthresh` is only a placeholder (0 or a big number): ignore it.
+Output columns: `time` = absolute time ([Unix time](https://docs.python.org/3/library/time.html#time.time): seconds since 1 Jan 1970), `cwnd` and `ssthresh` in segments (MSS = 1000 bytes), `rtt` = smoothed RTT in ms, `bytes` = bytes delivered so far (Linux: acked by the server; macOS: sent minus retransmitted). The plot scripts put time 0 at the first sample of all their files: runs made one after the other appear one after the other, clients started together appear together. Before the first loss `ssthresh` is only a placeholder (0 or a big number): ignore it.
 
 ---
 
@@ -224,7 +224,7 @@ What to find in your output:
 
 ## 3. Compare
 
-Start `plot_cwnd_overlay.py reno.csv cubic.csv` in the client terminal and open `cwnd_overlay.png`. The two runs were made at different moments: the script puts both at time 0, so they overlap. It also prints the average `cwnd` of each run.
+Start `plot_cwnd.py reno.csv cubic.csv` in the client terminal and open `cwnd.png`.
 
 ![NewReno vs Cubic, real run on macOS](img/reno_vs_cubic.svg)
 
@@ -251,7 +251,7 @@ Until now every loss came from the full queue: a **congestion** loss. Now we add
 
 **Step 2.** Repeat exercises 1 and 2 with `--out cubic_loss.csv` and `--out reno_loss.csv`.
 
-**Step 3.** Start `plot_cwnd_overlay.py reno_loss.csv cubic_loss.csv --out cwnd_loss.png` and open `cwnd_loss.png`.
+**Step 3.** Start `plot_cwnd.py reno_loss.csv cubic_loss.csv --out cwnd_loss.png` and open `cwnd_loss.png`.
 
 <!-- TODO: example plot from a real run -->
 
@@ -272,9 +272,60 @@ Until now each algorithm had the bottleneck all for itself. Two connections can 
 - Linux / WSL: `--cc reno` in one, `--cc cubic` in the other.
 - macOS: the switch counts when a connection **opens**. Set `use_newreno=1`, start the first client, set `use_newreno=0`, start the second one.
 
-**Step 2.** Start `plot_cwnd.py reno_mix.csv cubic_mix.csv --out mix.png`, then `plot_thr.py reno_mix.csv cubic_mix.csv --link 10 --out mix_thr.png`. Both clients write absolute time: in the plot the two curves line up, even if one client started a few seconds later. Here use `plot_cwnd.py`, not `plot_cwnd_overlay.py`: the overlay would move the second client back to time 0 and hide when it joined.
+**Step 2.** Start `plot_cwnd.py reno_mix.csv cubic_mix.csv --out mix.png`, then `plot_thr.py reno_mix.csv cubic_mix.csv --link 10 --out mix_thr.png`. Both clients write absolute time: in the plot the two curves line up, even if one client started a few seconds later.
 
 The two flows now compete for the same queue: how they share the link is the topic of **TCP fairness** (Kurose Sec. 3.7.2).
+
+---
+
+## 6. BBR
+
+Reno and Cubic are **reactive**: they grow until the queue is full and a packet is lost, then back off. BBR (Google, 2016) uses no alarm signal: it **measures** the path, the bottleneck bandwidth (the highest delivery rate it sees) and the propagation RTT (the lowest RTT it sees), and sends at that rate with about `bandwidth × RTT` bytes in flight. Ideally the link is full and the queue stays empty.
+
+How BBR moves in time:
+- **Startup**: doubles the rate every RTT (like slow start) until the delivery rate stops growing, then **Drain** empties the queue it has made.
+- **ProbeBW** (most of the time): a cycle of 8 RTTs, 1 at 1.25 × the rate (is there more bandwidth?), 1 at 0.75 (empty what the probe queued), 6 at 1.
+- **ProbeRTT**: if in 10 s the RTT never went down to its minimum, `cwnd` drops to 4 segments for ≈ 200 ms, to empty the queue and measure the real propagation RTT.
+
+On Linux the kernel has BBR v1; `./emulate_channel.sh start` loads it. macOS has no BBR.
+
+**Step 1.** Start the default channel: `./emulate_channel.sh start`.
+
+**Step 2.** Run Cubic, then BBR, one after the other:
+```bash
+python cwnd_client.py --cc cubic --time 40 --out cubic.csv
+python cwnd_client.py --cc bbr   --time 40 --out bbr.csv
+```
+
+**Step 3.** Plot the three quantities:
+```bash
+python plot_cwnd.py cubic.csv bbr.csv --out bbr_cwnd.png
+python plot_thr.py cubic.csv bbr.csv --link 10 --out bbr_thr.png
+python plot_rtt.py cubic.csv bbr.csv --delay 100 --out bbr_rtt.png
+```
+
+What to find:
+- **Throughput**: both reach ≈ 9.38 Mbit/s, the full link. BBR gets there with no loss.
+- **RTT**: Cubic stays well above the 100 ms of the cable, because it keeps the queue full. BBR stays close to 100 ms: the queue is almost empty. Same throughput, much less delay.
+- **`cwnd`**: no sawtooth for BBR. It stays near the ≈ 120 segments of `bandwidth × RTT`, and every ≈ 10 s it drops for a moment to 4 (**ProbeRTT**).
+
+**Step 4: random loss.** Start `LOSS=1% ./emulate_channel.sh start` and repeat steps 2 and 3 with `--out cubic_loss1.csv` and `--out bbr_loss1.csv`.
+
+What to find:
+- Cubic reads every lost packet as congestion: its `cwnd` stays small and the throughput falls to a small part of the link.
+- BBR does not use loss as a signal: it keeps sending at the rate it measured, and the throughput stays close to the link.
+
+**Step 5: together (optional).** Back to `./emulate_channel.sh start`. As in exercise 5, start a Cubic client and, 20 s later, a BBR client:
+```bash
+python cwnd_client.py --cc cubic --time 40 --out cubic_mix.csv > /dev/null &
+sleep 20
+python cwnd_client.py --cc bbr   --time 40 --out bbr_mix.csv > /dev/null
+wait
+python plot_thr.py cubic_mix.csv bbr_mix.csv --link 10 --out bbr_mix_thr.png
+```
+Cubic fills the queue, BBR does not use the queue as a signal: who gets more of the link? It depends on the size of the queue. Try again with `QUEUE=500 ./emulate_channel.sh start`.
+
+**Step 6.** Back to the default channel: `./emulate_channel.sh start`.
 
 ---
 
@@ -284,3 +335,4 @@ For the curious, to study the details:
 - [RFC 5681](https://www.rfc-editor.org/rfc/rfc5681): TCP congestion control (Reno)
 - [RFC 6582](https://www.rfc-editor.org/rfc/rfc6582): NewReno
 - [RFC 9438](https://www.rfc-editor.org/rfc/rfc9438): CUBIC
+- [BBR: Congestion-Based Congestion Control](https://queue.acm.org/detail.cfm?id=3022184), Cardwell et al., ACM Queue 2016

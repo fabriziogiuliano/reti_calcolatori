@@ -13,7 +13,7 @@ SERVER = ("127.0.0.1", 12000)
 MSS = 1000
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument("--cc", default="cubic", help="congestion control, reno or cubic (Linux only)")
+parser.add_argument("--cc", default="cubic", help="congestion control, reno, cubic or bbr (Linux only)")
 parser.add_argument("--time", type=float, default=30, help="seconds of sending")
 parser.add_argument("--every", type=float, default=0.05, help="seconds between two cwnd samples")
 parser.add_argument("--out", default="cwnd.csv", help="CSV file for the samples")
@@ -26,7 +26,13 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 # choose the congestion control algorithm
 if sys.platform == "linux":
-    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_CONGESTION, args.cc.encode())
+    try:
+        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_CONGESTION, args.cc.encode())
+    except OSError:
+        print("congestion control '%s' not available, the kernel has: %s" % (args.cc,
+              open("/proc/sys/net/ipv4/tcp_available_congestion_control").read().strip()))
+        print("for bbr: run ./emulate_channel.sh start (it loads the tcp_bbr module)")
+        sys.exit(1)
     cc = sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_CONGESTION, 16).strip(b"\0").decode()
 else:
     # macOS: one switch for the whole system, 1 = newreno, 0 = cubic
