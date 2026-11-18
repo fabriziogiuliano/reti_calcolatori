@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-# TCP client: send as fast as possible to tcp_server.py and log the congestion window
+# TCP client: send as fast as possible to tcp_server.py and log the congestion window,
+# the RTT and the bytes delivered (for the throughput)
 
 import argparse
 import socket
@@ -50,8 +51,8 @@ sock.settimeout(0.01)
 data = b"x" * 65536
 
 out = open(args.out, "w")
-out.write("time,cwnd,ssthresh\n")
-print("time,cwnd,ssthresh")
+out.write("time,cwnd,ssthresh,rtt,bytes\n")
+print("time,cwnd,ssthresh,rtt,bytes")
 start = time.time()
 next_sample = start
 while time.time() - start < args.time:
@@ -63,20 +64,25 @@ while time.time() - start < args.time:
         continue
     next_sample += args.every
 
-    # read cwnd and ssthresh from the kernel
+    # read cwnd, ssthresh, RTT and delivered bytes from the kernel
     if sys.platform == "linux":
-        info = sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_INFO, 104)    # struct tcp_info
+        info = sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_INFO, 128)    # struct tcp_info
+        rtt = struct.unpack_from("I", info, 68)[0] / 1000                   # smoothed RTT, us -> ms
         ssthresh = struct.unpack_from("I", info, 76)[0]                     # in segments
         cwnd = struct.unpack_from("I", info, 80)[0]
+        nbytes = struct.unpack_from("Q", info, 120)[0]                      # bytes acked by the server
     else:
         info = sock.getsockopt(socket.IPPROTO_TCP, 0x106, 112)    # TCP_CONNECTION_INFO
         ssthresh = struct.unpack_from("I", info, 20)[0] // MSS     # in bytes: to segments
         cwnd = struct.unpack_from("I", info, 24)[0] // MSS
+        rtt = struct.unpack_from("I", info, 44)[0]                 # smoothed RTT, ms
+        # bytes sent minus bytes retransmitted (macOS does not give the acked bytes)
+        nbytes = struct.unpack_from("Q", info, 64)[0] - struct.unpack_from("Q", info, 72)[0]
     if ssthresh > 100000:    # "infinite" before the first loss
         ssthresh = 0
 
     # absolute time (Unix time): files of clients started at different moments line up
-    line = "%.3f,%d,%d" % (time.time(), cwnd, ssthresh)
+    line = "%.3f,%d,%d,%.1f,%d" % (time.time(), cwnd, ssthresh, rtt, nbytes)
     out.write(line + "\n")
     print(line)
 

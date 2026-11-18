@@ -7,16 +7,19 @@ A client sends as fast as it can to a server on your own machine (loopback). An 
 ![Emulated channel](img/channel.svg)
 
 - **Data**: router queue (50 packets), then the link (10 Mbit/s). This is the queue of the textbook: it fills up and drops packets.
-- **ACKs**: the same router queue and link (a real link has both directions), then the cable (100 ms). ACKs are small (52 bytes against 1052): their queue stays almost always empty.
+- **ACKs**: the same router queue and link (a real link has both directions), then the cable (100 ms). ACKs are small (66 bytes against 1066, Ethernet header included): their queue stays almost always empty.
 - The cable holds every packet in flight: in the emulator we give it room for ≈ 1500 packets, in practice unlimited.
 
 RTT ≈ 100 ms.
 
 | File | What it does |
 |---|---|
+| `emulate_channel.sh` | **the channel** (Linux): link speed, delay, loss, queue; `start`, `show`, `stop` |
 | `tcp_server.py` | receives everything on port 12000, from many clients at the same time |
-| `cwnd_client.py` | sends for `--time` seconds; every `--every` seconds prints and saves `time,cwnd,ssthresh` |
-| `plot_cwnd.py` | draws the `cwnd` of one or more CSV files in `--out` (default `cwnd.png`; also `.svg`, `.pdf`) |
+| `cwnd_client.py` | sends for `--time` seconds; every `--every` seconds prints and saves `time,cwnd,ssthresh,rtt,bytes` |
+| `plot_cwnd_overlay.py` | overlays experiments run **one after the other**: each file starts at its own time 0; draws in `--out` (default `cwnd_overlay.png`; also `.svg`, `.pdf`) |
+| `plot_cwnd.py` | draws clients that ran **at the same time**, on their real time; draws in `--out` (default `cwnd.png`) |
+| `plot_thr.py` | draws the **throughput** (Mbit/s) of one or more CSV files in `--out` (default `thr.png`), on the real (absolute) time; `--link 10` also draws the link capacity (Mbit/s) |
 
 | Option | What it does (default) |
 |---|---|
@@ -25,7 +28,7 @@ RTT ≈ 100 ms.
 | `--every` | seconds between two samples (0.05) |
 | `--out` | CSV file for the samples (cwnd.csv) |
 
-Output columns: `time` = absolute time ([Unix time](https://docs.python.org/3/library/time.html#time.time): seconds since 1 Jan 1970), `cwnd` and `ssthresh` in segments (MSS = 1000 bytes). `plot_cwnd.py` puts time 0 at the first sample of all its files. Before the first loss `ssthresh` is only a placeholder (0 or a big number): ignore it.
+Output columns: `time` = absolute time ([Unix time](https://docs.python.org/3/library/time.html#time.time): seconds since 1 Jan 1970), `cwnd` and `ssthresh` in segments (MSS = 1000 bytes), `rtt` = smoothed RTT in ms, `bytes` = bytes delivered so far (Linux: acked by the server; macOS: sent minus retransmitted). `plot_cwnd_overlay.py` puts time 0 at the first sample of each file; `plot_cwnd.py` at the first sample of all its files. Before the first loss `ssthresh` is only a placeholder (0 or a big number): ignore it.
 
 ---
 
@@ -44,90 +47,102 @@ Open two terminals: one for the **server**, one for the **client**.
 
 Start `tcp_server.py` in the server terminal. Leave it running for all the exercises.
 
+Start the channel in the client terminal: `./emulate_channel.sh start` (see below).
+
 ---
 
 ## Emulator (sudo)
 
-The emulator gives the data packets (to port 12000) a queue of 50 packets and a 10 Mbit/s link; the ACKs (from port 12000) get the same queue and link, then a cable of 100 ms with room for ≈ 1500 packets. All its commands need `sudo`.
+The emulator is the **channel** of the experiment: the data packets (to port 12000) get a router queue and a link; the ACKs (from port 12000) get the same queue and link, then a cable that adds the delay.
 
-> **Preview.** Here `tc` (Linux) and `dnctl` (macOS) are only a tool: copy the commands as they are. We will study network emulation in much more detail later in the course.
+### Linux / WSL: `emulate_channel.sh`
 
-Read **only the part for your system**.
+One script does everything: **you only choose the channel, then look at the results**.
 
-> [!WARNING]
-> ⚠️ **Coming from lab 08?** Run its **Stop** commands first: an old loss or delay setting left in the emulator spoils every result here.
+```bash
+./emulate_channel.sh start     # start (or restart) the channel
+./emulate_channel.sh show      # show the current settings
+./emulate_channel.sh stop      # remove it, at the end
+```
 
-### Linux / WSL
+| Variable | What it is | Default |
+|---|---|---|
+| `DELAY` | one-way delay of the cable: RTT ≈ `DELAY` | `100ms` |
+| `LOSS` | random loss of the data packets | `0%` |
+| `QUEUE` | router queue, in packets | `50` |
+| `RATE` | link speed | `10mbit` |
 
-**Start** (once).
+Change a value by writing it before the command; the others keep the default. `start` always removes the old settings first: no need to `stop` between two scenarios.
+```bash
+./emulate_channel.sh start                         # the channel of exercises 1-3 and 5
+LOSS=0.1% ./emulate_channel.sh start               # exercise 4
+RATE=1000mbit DELAY=1ms ./emulate_channel.sh start # another scenario: fast link, short cable
 ```
-sudo ethtool -K lo tso off gso off
-sudo tc qdisc add dev lo root handle 1: prio
-sudo tc qdisc add dev lo parent 1:1 handle 10: netem rate 10mbit limit 50
-sudo tc qdisc add dev lo parent 1:3 handle 30: netem delay 100ms limit 1500
-sudo tc qdisc add dev lo parent 30:1 handle 31: tbf rate 10mbit burst 1540 limit 52000
-sudo tc filter add dev lo parent 1: protocol ip u32 match ip dport 12000 0xffff flowid 1:1
-sudo tc filter add dev lo parent 1: protocol ip u32 match ip sport 12000 0xffff flowid 1:3
-```
-Data: `limit 50` is the router queue (packets), `rate` the link speed. ACKs: `netem delay 100ms limit 1500` is the cable (room for 1500 packets), then `tbf` is the link (`rate`) with its router queue (`limit`, in bytes: 52000 ≈ 50 packets).
+It asks for the `sudo` password. With `RATE` other than 10 Mbit/s, give the same value to `plot_thr.py --link` (in Mbit/s).
 
-**Change: random loss** (only for exercise 4).
+> **Preview.** Here `tc` is only a tool: we will study network emulation in much more detail later in the course.
 
-Activate: 0.1 % of the data packets are lost.
-```
-sudo tc qdisc change dev lo parent 1:1 handle 10: netem rate 10mbit limit 50 loss 0.1%
-```
-Remove: back to no loss.
-```
-sudo tc qdisc change dev lo parent 1:1 handle 10: netem rate 10mbit limit 50 loss 0%
-```
-`loss` is the probability of losing a packet. Always write the **whole** line: `change` replaces all the settings, and without `rate` and `limit` the bottleneck is gone.
+> <details>
+> <summary><b>What the script runs</b> (click to open)</summary>
+>
+> With the default values:
+> ```
+> sudo tc qdisc del dev lo root
+> sudo ethtool -K lo tso off gso off
+> sudo tc qdisc add dev lo root handle 1: prio
+> sudo tc qdisc add dev lo parent 1:1 handle 10: netem rate 10mbit limit 50 loss 0%
+> sudo tc qdisc add dev lo parent 1:3 handle 30: netem delay 100ms limit 1500
+> sudo tc qdisc add dev lo parent 30:1 handle 31: tbf rate 10mbit burst 1540 limit 52000
+> sudo tc filter add dev lo parent 1: protocol ip u32 match ip dport 12000 0xffff flowid 1:1
+> sudo tc filter add dev lo parent 1: protocol ip u32 match ip sport 12000 0xffff flowid 1:3
+> ```
+> Data: `netem rate ... limit 50 loss ...` is the link, its router queue (packets) and the random loss. ACKs: `netem delay 100ms limit 1500` is the cable (room for 1500 packets), then `tbf` is the link with its router queue (`limit` in bytes: 52000 ≈ 50 packets). `ethtool` turns off TSO/GSO, so the emulator sees real 1000-byte segments and not 64 KB blocks.
+>
+> `stop` runs `sudo tc qdisc del dev lo root` and `sudo ethtool -K lo tso on gso on`. Details: [man tc-netem](https://man7.org/linux/man-pages/man8/tc-netem.8.html).
+>
+> </details>
 
-**Stop** (at the end).
-```
-sudo tc qdisc del dev lo root
-sudo ethtool -K lo tso on gso on
-```
-Details: [man tc-netem](https://man7.org/linux/man-pages/man8/tc-netem.8.html).
-
-### macOS
-
-**Start** (once).
-```
-sudo dnctl pipe 1 config bw 10Mbit/s queue 50
-sudo dnctl pipe 2 config bw 10Mbit/s queue 50 delay 100
-printf "dummynet out on lo0 proto tcp from any to any port 12000 pipe 1\ndummynet out on lo0 proto tcp from any port 12000 to any pipe 2\n" | sudo pfctl -f -
-sudo pfctl -e
-```
-In a dummynet pipe a packet goes through the router queue (`queue`, packets), then the link (`bw`), then the cable (`delay`, ms; it has no size limit). Pipe 1 = data, pipe 2 = ACKs. `pfctl` prints some warnings (`flushing of rules`, `No ALTQ`): they are normal.
-
-**Change: random loss** (only for exercise 4).
-
-Activate: 0.1 % of the data packets are lost.
-```
-sudo dnctl pipe 1 config bw 10Mbit/s queue 50 plr 0.001
-```
-Remove: back to no loss.
-```
-sudo dnctl pipe 1 config bw 10Mbit/s queue 50 plr 0
-```
-`plr` (packet loss rate) is the probability of losing a packet, from 0 to 1: 0.001 = 0.1 %. Always write the **whole** line: `config` replaces all the settings of the pipe, and without `bw` and `queue` the bottleneck is gone.
-
-**Stop** (at the end).
-```
-sudo pfctl -f /etc/pf.conf
-sudo pfctl -d
-sudo dnctl -q flush
-```
-Details: [man dnctl](https://keith.github.io/xcode-man-pages/dnctl.8.html).
+> <details>
+> <summary><b>macOS</b> (click to open)</summary>
+>
+> **Start** (once).
+> ```
+> sudo dnctl pipe 1 config bw 10Mbit/s queue 50
+> sudo dnctl pipe 2 config bw 10Mbit/s queue 50 delay 100
+> printf "dummynet out on lo0 proto tcp from any to any port 12000 pipe 1\ndummynet out on lo0 proto tcp from any port 12000 to any pipe 2\n" | sudo pfctl -f -
+> sudo pfctl -e
+> ```
+> In a dummynet pipe a packet goes through the router queue (`queue`, packets), then the link (`bw`), then the cable (`delay`, ms; it has no size limit). Pipe 1 = data, pipe 2 = ACKs. `pfctl` prints some warnings (`flushing of rules`, `No ALTQ`): they are normal.
+>
+> **Change: random loss** (only for exercise 4).
+>
+> Activate: 0.1 % of the data packets are lost.
+> ```
+> sudo dnctl pipe 1 config bw 10Mbit/s queue 50 plr 0.001
+> ```
+> Remove: back to no loss.
+> ```
+> sudo dnctl pipe 1 config bw 10Mbit/s queue 50 plr 0
+> ```
+> `plr` (packet loss rate) is the probability of losing a packet, from 0 to 1: 0.001 = 0.1 %. Always write the **whole** line: `config` replaces all the settings of the pipe, and without `bw` and `queue` the bottleneck is gone.
+>
+> **Stop** (at the end).
+> ```
+> sudo pfctl -f /etc/pf.conf
+> sudo pfctl -d
+> sudo dnctl -q flush
+> ```
+> Details: [man dnctl](https://keith.github.io/xcode-man-pages/dnctl.8.html).
+>
+> </details>
 
 ### Check that it works
 
 Start `cwnd_client.py --time 10` in the client terminal.
 
 - Emulator **working**: `cwnd` stays below ≈ 180 segments and falls down at each loss.
-- Emulator **not active**: `cwnd` grows to thousands of segments. Run the **Start** commands again. On macOS this happens after every reboot.
-- `cwnd` always falls around 50 or less: an old setting is still there (see the warning above). Run **Stop**, then **Start**.
+- Emulator **not active**: `cwnd` grows to thousands of segments. Run `./emulate_channel.sh start` (macOS: the **Start** commands; needed after every reboot).
+- `cwnd` always falls around 50 or less: an old loss setting is still there. Check with `./emulate_channel.sh show`, then run `./emulate_channel.sh start` again.
 
 ---
 
@@ -135,17 +150,24 @@ Start `cwnd_client.py --time 10` in the client terminal.
 
 The first line of the client output tells which algorithm is in use, e.g. `congestion control: cubic`.
 
-- **Linux / WSL**: per connection, with the `--cc` option of the client. No `sudo`.
-- **macOS**: one switch for the whole system, `--cc` is ignored. 1 = NewReno, 0 = Cubic (the default):
-  ```
-  sudo sysctl -w net.inet.tcp.use_newreno=1
-  ```
-  At the end set it back to 0.
+**Linux / WSL**: per connection, with the `--cc` option of the client. No `sudo`.
 
 How the client does it (only to read the code):
-- Linux: `setsockopt(TCP_CONGESTION)` chooses the algorithm, `getsockopt(TCP_INFO)` returns `cwnd` and `ssthresh` ([man tcp](https://man7.org/linux/man-pages/man7/tcp.7.html)).
-- macOS: `sysctl -n` reads the switch, `getsockopt(TCP_CONNECTION_INFO)` returns `cwnd` and `ssthresh` in bytes.
+- `setsockopt(TCP_CONGESTION)` chooses the algorithm, `getsockopt(TCP_INFO)` returns `cwnd`, `ssthresh`, RTT and acked bytes ([man tcp](https://man7.org/linux/man-pages/man7/tcp.7.html)).
 - `struct.unpack_from("I", info, 80)` reads the 4-byte number at byte 80 of the kernel answer ([Python struct](https://docs.python.org/3/library/struct.html)).
+
+> <details>
+> <summary><b>macOS</b> (click to open)</summary>
+>
+> One switch for the whole system, `--cc` is ignored. 1 = NewReno, 0 = Cubic (the default):
+> ```
+> sudo sysctl -w net.inet.tcp.use_newreno=1
+> ```
+> At the end set it back to 0.
+>
+> How the client does it: `sysctl -n` reads the switch, `getsockopt(TCP_CONNECTION_INFO)` returns `cwnd` and `ssthresh` in bytes.
+>
+> </details>
 
 ---
 
@@ -202,7 +224,7 @@ What to find in your output:
 
 ## 3. Compare
 
-Start `plot_cwnd.py reno.csv cubic.csv` in the client terminal and open `cwnd.png`.
+Start `plot_cwnd_overlay.py reno.csv cubic.csv` in the client terminal and open `cwnd_overlay.png`. The two runs were made at different moments: the script puts both at time 0, so they overlap. It also prints the average `cwnd` of each run.
 
 ![NewReno vs Cubic, real run on macOS](img/reno_vs_cubic.svg)
 
@@ -212,17 +234,24 @@ What to find in the plot:
 - Cubic keeps a **larger `cwnd` on average** (here 131 segments against 103).
 - The link is full with ≈ 120 segments in flight (10 Mbit/s × 100 ms): Cubic falls back to about that value, NewReno goes well below it and leaves the link partly empty for many seconds.
 
+Now look at what the user gets: the **throughput**. Start `plot_thr.py reno.csv cubic.csv --link 10` and open `thr.png` (`--link` = the link speed of the emulator, in Mbit/s). It also prints the average throughput of each run.
+
+What to find in the plot:
+- The throughput never goes above ≈ 9.38 Mbit/s: it counts only the data, while the link carries whole packets. Each packet has 1000 bytes of data in 1066 (TCP 20 + Timestamps 12 + IP 20 + Ethernet 14): 10 × 1000 / 1066 = 9.38. This is the **goodput**: with the headers the link is 100 % full.
+- Throughput ≈ `cwnd · MSS / RTT`, but only up to the link: with more than ≈ 120 segments in flight the extra ones wait in the queue (the `rtt` column grows) and the throughput stays flat.
+- After a loss the throughput goes down only if `cwnd` falls below ≈ 120: NewReno (down to half) loses throughput for a few seconds, Cubic (down to 0.7) almost never.
+
 ---
 
 ## 4. Random loss
 
 Until now every loss came from the full queue: a **congestion** loss. Now we add losses that have nothing to do with congestion (e.g. a noisy radio link): TCP cannot tell the difference.
 
-**Step 1.** Activate 0.1 % loss with the **Change: random loss** command of your system.
+**Step 1.** Activate 0.1 % loss: `LOSS=0.1% ./emulate_channel.sh start` (macOS: the **Change: random loss** command).
 
 **Step 2.** Repeat exercises 1 and 2 with `--out cubic_loss.csv` and `--out reno_loss.csv`.
 
-**Step 3.** Start `plot_cwnd.py reno_loss.csv cubic_loss.csv --out cwnd_loss.png` and open `cwnd_loss.png`.
+**Step 3.** Start `plot_cwnd_overlay.py reno_loss.csv cubic_loss.csv --out cwnd_loss.png` and open `cwnd_loss.png`.
 
 <!-- TODO: example plot from a real run -->
 
@@ -231,7 +260,7 @@ What to find in the plot:
 - Both stay below the ≈ 120 segments needed to fill the link: part of the link is wasted.
 - Cubic suffers less: it falls only to 0.7 and climbs back faster.
 
-**Step 4.** Remove the random loss with the **Remove** command of your system.
+**Step 4.** Remove the random loss: `./emulate_channel.sh start` (macOS: the **Remove** command).
 
 ---
 
@@ -243,7 +272,7 @@ Until now each algorithm had the bottleneck all for itself. Two connections can 
 - Linux / WSL: `--cc reno` in one, `--cc cubic` in the other.
 - macOS: the switch counts when a connection **opens**. Set `use_newreno=1`, start the first client, set `use_newreno=0`, start the second one.
 
-**Step 2.** Start `plot_cwnd.py reno_mix.csv cubic_mix.csv --out mix.png`. Both clients write absolute time: in the plot the two curves line up, even if one client started a few seconds later.
+**Step 2.** Start `plot_cwnd.py reno_mix.csv cubic_mix.csv --out mix.png`, then `plot_thr.py reno_mix.csv cubic_mix.csv --link 10 --out mix_thr.png`. Both clients write absolute time: in the plot the two curves line up, even if one client started a few seconds later. Here use `plot_cwnd.py`, not `plot_cwnd_overlay.py`: the overlay would move the second client back to time 0 and hide when it joined.
 
 The two flows now compete for the same queue: how they share the link is the topic of **TCP fairness** (Kurose Sec. 3.7.2).
 
