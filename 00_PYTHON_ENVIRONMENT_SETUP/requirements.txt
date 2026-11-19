@@ -5,6 +5,7 @@
 hypercorn          # HTTP/2 server (02_HTTP/02_06_HTTP_HOL)
 aiosmtpd           # local mail server (03_SMTP)
 matplotlib         # cwnd plot (09_CONGESTION_CTL)
+aioquic            # QUIC transport (10_QUIC)
 
 # --- Only for the old scripts in _archivio/ ---
 requests
