@@ -326,42 +326,54 @@ What to find:
 - Cubic reads every lost packet as congestion: its `cwnd` stays small and the throughput falls to a small part of the link.
 - BBR does not use loss as a signal: it keeps sending at the rate it measured, and the throughput stays close to the link.
 
-**Step 5: together (optional).** Cubic and BBR start **at the same moment** on the same router queue. Who gets more of the link depends on the size of the queue compared with the BDP (≈ 117 packets on the default channel): try a small, a medium and a large queue.
+**Step 5: together (optional).** Cubic and BBR start **at the same moment** on the same router queue. Who gets more of the link depends on the size of the queue Q compared with the BDP (≈ 117 packets here).
 
-| queue | `QUEUE` | compared with the BDP |
-|---|---|---|
-| small | 50 | ≈ 0.4 BDP |
-| medium | 350 | ≈ 3 BDP |
-| large | 1000 | ≈ 8.5 BDP (use `--time 120`: a full queue adds ≈ 850 ms to the RTT) |
+![model: BBR and Cubic on the same queue](img/bbr_cubic_model.svg)
 
-For each queue size, set `QUEUE` in the first line and run:
+The model, in three lines:
+- the network holds **BDP + Q** packets (cable + queue), and each flow gets a share of the link equal to its share of these packets;
+- **BBR** keeps at most **2 BDP** in flight: its `cwnd` is 2 × the BDP it measures (the factor 2 is a margin for late ACKs). It does not grow at the losses;
+- **Cubic** grows until the queue overflows: it takes all the rest, **Q − BDP**.
+
+So **BDP + Q = BBR + Cubic = 2 BDP + (Q − BDP)**, and the two get the same share when Q − BDP = 2 BDP, that is **Q = 3 BDP**. Smaller queue: BBR wins. Larger queue: Cubic wins.
+
+| queue | `QUEUE` | compared with the BDP | expected |
+|---|---|---|---|
+| small | 50 | ≈ 0.4 BDP | BBR wins |
+| medium | 350 | ≈ 3 BDP | half each |
+| large | 1000 | ≈ 8.5 BDP | Cubic wins |
+
+For each queue, set `QUEUE` in the first line and run (180 s: see the transient below):
 ```bash
-QUEUE=50
+QUEUE=350
 
 QUEUE=$QUEUE ./emulate_channel.sh start
 
-python cwnd_client.py --cc cubic --time 60 --out q${QUEUE}_cubic.csv > /dev/null &
-python cwnd_client.py --cc bbr   --time 60 --out q${QUEUE}_bbr.csv   > /dev/null
+python cwnd_client.py --cc cubic --time 180 --out q${QUEUE}_cubic.csv > /dev/null &
+python cwnd_client.py --cc bbr   --time 180 --out q${QUEUE}_bbr.csv   > /dev/null
 wait
 
 python plot_thr.py  q${QUEUE}_cubic.csv q${QUEUE}_bbr.csv --link 10 --out q${QUEUE}_thr.png
 python plot_cwnd.py q${QUEUE}_cubic.csv q${QUEUE}_bbr.csv           --out q${QUEUE}_cwnd.png
 ```
-`&` starts Cubic in the background, so the two clients start together; `wait` waits for it before plotting. Write `${QUEUE}` with braces: `$QUEUE_cubic` would be read as a variable named `QUEUE_cubic`. Start one run only when the previous one is over: a client left running is a third flow on the link.
+`&` starts Cubic in the background, so the two clients start together; `wait` waits for it. Write `${QUEUE}` with braces (`$QUEUE_cubic` would be a variable named `QUEUE_cubic`). Start a run only when the previous one is over.
 
-Real run (Linux): Cubic and BBR started **at the same moment**, router queue of 50 packets (≈ 0.4 BDP).
+Real run, **small queue** (50 packets): BBR ≈ 7.6 Mbit/s, Cubic ≈ 1.5. The network holds BDP + 50 ≈ 167 packets, less than the ≈ 230 BBR wants: the queue overflows all the time, and only Cubic backs off. The `cwnd` of BBR stays flat at ≈ 230 = 2 BDP; every ≈ 10 s it drops to 4 for ≈ 200 ms (**ProbeRTT**, to measure the RTT of the empty cable).
 
 ![throughput, Cubic and BBR, queue 50](img/q50_thr.svg)
 
-![cwnd, Cubic and BBR, queue 50](img/q50_cwnd.svg)
+Real run, **medium queue** (350 packets ≈ 3 BDP), 180 s:
 
-![RTT, Cubic and BBR, queue 50](img/q50_rtt.svg)
+![throughput, Cubic and BBR, queue 350](img/q350_thr.svg)
 
-What to find in the plots:
-- **Throughput**: BBR ≈ 7.6 Mbit/s, Cubic ≈ 1.5 Mbit/s. With a small queue BBR takes most of the link.
-- **`cwnd`**: BBR flat at ≈ 230 = 2 × BDP, its cap; Cubic squeezed down to ≈ 20–30. The channel holds only BDP + 50 ≈ 167 packets: BBR alone wants more, the queue overflows all the time, and only Cubic backs off at the losses.
-- **RTT**: both ≈ 150–180 ms, far above the 100 ms of the cable: the queue is always full.
-- **ProbeRTT**: every 10 s the `cwnd` of BBR drops to 4 for ≈ 200 ms, its throughput dips and the RTT goes back near 100 ms for a moment.
+| | 0-10 s | 10-20 s | 20-30 s | 30-40 s | 40-50 s | 60-180 s (steady state) |
+|---|---|---|---|---|---|---|
+| share of BBR | 18 % | 16 % | 23 % | 37 % | 39 % | **47 %** (every 10 s: between 38 and 54 %) |
+
+- **Transient** (first ≈ 50 s): Cubic starts strong, BBR grows slowly. BBR raises its estimate of the bandwidth only in 1 RTT out of 8, and with the queue full the RTT is ≈ 0.57 s.
+- **Steady state**: ≈ half each, as the model says. Not a flat line: the share moves by a few %, at each ProbeRTT of BBR (the dips to 0).
+
+> **Beware of the transient.** Stop this run at 30 s and you read "Cubic takes ≈ 80 %, the model is wrong"; at 180 s it is ≈ half each. Nothing changed in the network, only **when** we looked. Plot the throughput over time, and average only where it has stopped moving.
 
 **Step 6.** Back to the default channel: `./emulate_channel.sh start`.
 
