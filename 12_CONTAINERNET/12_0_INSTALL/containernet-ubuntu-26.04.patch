@@ -1,5 +1,5 @@
-Containernet: supporto Ubuntu 26.04 (cgroup v2, Python >= 3.12, GCC 15, Docker >= 28)
-Base upstream: containernet/containernet@8e0aabef8f23def3961b30897dd486191d9bd693
+Containernet: Ubuntu 26.04 support (cgroup v2, Python >= 3.12, GCC 15, Docker >= 28)
+Upstream base: containernet/containernet@8e0aabef8f23def3961b30897dd486191d9bd693
 
  examples/cluster.py               |   2 +-
  examples/miniedit.py              |   2 +-

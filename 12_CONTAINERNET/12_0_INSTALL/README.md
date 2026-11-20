@@ -1,27 +1,27 @@
-# Containernet su Ubuntu 26.04
+# Containernet on Ubuntu 26.04
 
-Guida all'installazione di [Containernet](https://containernet.github.io/) su **Ubuntu 26.04 LTS**, con una patch per il supporto a 26.04 e un ambiente **conda**.
+Installation guide for [Containernet](https://containernet.github.io/) on **Ubuntu 26.04 LTS**, using a patch that adds 26.04 support and a **conda** environment.
 
-## Requisiti
+## Requirements
 
-- Ubuntu 26.04 LTS (va bene anche la versione Server), con un utente che può usare `sudo`
-- almeno 2 CPU, 4 GB di RAM e 30 GB di disco
-- [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install/linux-install): scegli l'installer per la tua architettura (`x86_64` o `aarch64`, la vedi con `uname -m`)
+- Ubuntu 26.04 LTS (the Server edition is fine), with a user that can run `sudo`
+- at least 2 CPUs, 4 GB of RAM and 30 GB of disk
+- [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install/linux-install): pick the installer for your architecture (`x86_64` or `aarch64`, check with `uname -m`)
 
-> **Licenza:** i canali predefiniti di Anaconda sono soggetti ai [Terms of Service di Anaconda](https://www.anaconda.com/legal/terms/terms-of-service). Se non potete accettarli, al passo 4 aggiungi `-c conda-forge --override-channels` a `conda create`.
+> **License:** Anaconda's default channels are subject to the [Anaconda Terms of Service](https://www.anaconda.com/legal/terms/terms-of-service). If you cannot accept them, add `-c conda-forge --override-channels` to `conda create` in step 4.
 
-## Installazione
+## Installation
 
-Tutti i comandi partono dalla stessa cartella, per esempio la tua home.
+Run all commands from the same directory, for example your home directory.
 
-### 1. Pacchetti di base
+### 1. Base packages
 
 ```bash
 sudo apt-get update
 sudo apt-get install -y git ansible
 ```
 
-### 2. Scaricare Containernet e applicare la patch
+### 2. Download Containernet and apply the patch
 
 ```bash
 git clone https://github.com/containernet/containernet.git
@@ -34,19 +34,19 @@ git apply ../reti_calcolatori/12_CONTAINERNET/12_0_INSTALL/containernet-ubuntu-2
 cd ..
 ```
 
-La patch vale solo per il commit indicato nel `git checkout`. Se `git apply --check` dà errore, controlla di aver fatto il checkout e non proseguire.
+The patch only applies to the commit in the `git checkout` line. If `git apply --check` fails, make sure you ran the checkout and do not continue.
 
-### 3. Installare le dipendenze con Ansible
+### 3. Install the dependencies with Ansible
 
 ```bash
 sudo ansible-playbook -i "localhost," -c local containernet/ansible/install.yml
 ```
 
-Installa Docker CE, Open vSwitch, le dipendenze di Mininet e il controller OpenFlow. Ci vogliono diversi minuti.
+This installs Docker CE, Open vSwitch, the Mininet dependencies and the OpenFlow controller. It takes several minutes.
 
-Se si interrompe e devi rilanciarlo, cancella prima la cartella creata dall'installer: `sudo rm -rf openflow`.
+If it stops and you need to run it again, first delete the directory created by the installer: `sudo rm -rf openflow`.
 
-### 4. Ambiente conda
+### 4. Conda environment
 
 ```bash
 conda create -n containernet python=3.12 -y
@@ -56,12 +56,12 @@ cd containernet
 pip install .
 ```
 
-### 5. Verifica
+### 5. Check
 
 ```bash
 sudo "$CONDA_PREFIX/bin/python" examples/containernet_example.py
 ```
 
-Deve comparire `*** Results: 0% dropped (2/2 received)`. Al prompt `containernet>` scrivi `exit`.
+You should see `*** Results: 0% dropped (2/2 received)`. At the `containernet>` prompt, type `exit`.
 
-Gli script si lanciano sempre con `sudo "$CONDA_PREFIX/bin/python"`, con l'ambiente `containernet` attivo.
+Always run scripts with `sudo "$CONDA_PREFIX/bin/python"`, with the `containernet` environment active.
