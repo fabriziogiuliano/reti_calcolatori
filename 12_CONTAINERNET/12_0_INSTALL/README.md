@@ -51,8 +51,8 @@ If it stops and you need to run it again, first delete the directory created by 
 ### 4. Conda environment
 
 ```bash
-conda create -n containernet python=3.14 -y
-conda activate containernet
+conda create -n cn python=3.14 -y
+conda activate cn
 
 cd ~/containernet
 pip install .
@@ -67,4 +67,4 @@ sudo "$CONDA_PREFIX/bin/python" examples/containernet_example.py
 
 You should see `*** Results: 0% dropped (2/2 received)`. At the `containernet>` prompt, type `exit`.
 
-Always run scripts with `sudo "$CONDA_PREFIX/bin/python"`, with the `containernet` environment active.
+Always run scripts with `sudo "$CONDA_PREFIX/bin/python"`, with the `cn` environment active.
