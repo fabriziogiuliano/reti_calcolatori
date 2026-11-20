@@ -1,0 +1,543 @@
+Containernet: supporto Ubuntu 26.04 (cgroup v2, Python >= 3.12, GCC 15, Docker >= 28)
+Base upstream: containernet/containernet@8e0aabef8f23def3961b30897dd486191d9bd693
+
+ examples/cluster.py               |   2 +-
+ examples/miniedit.py              |   2 +-
+ mininet/clean.py                  |  11 ++-
+ mininet/fault_injectors.py        |  16 ++++
+ mininet/net.py                    |  24 ++++--
+ mininet/node.py                   | 152 +++++++++++++++++++++++++++++++-------
+ mininet/test/test_containernet.py |   5 ++
+ mininet/util.py                   |  71 ++++++++++++++++++
+ mnexec.c                          |  14 ++++
+ util/install.sh                   |   4 +-
+ 10 files changed, 263 insertions(+), 38 deletions(-)
+
+diff --git a/examples/cluster.py b/examples/cluster.py
+index 4af7cfa..68bd5c0 100755
+--- a/examples/cluster.py
++++ b/examples/cluster.py
+@@ -82,7 +82,7 @@
+ import re
+ from itertools import groupby
+ from operator import attrgetter
+-from distutils.version import StrictVersion
++from mininet.util import StrictVersion
+ 
+ from mininet.node import Node, Host, OVSSwitch, Controller
+ from mininet.link import Link, Intf
+diff --git a/examples/miniedit.py b/examples/miniedit.py
+index 771470e..87e5726 100755
+--- a/examples/miniedit.py
++++ b/examples/miniedit.py
+@@ -18,7 +18,7 @@
+ import re
+ import sys
+ 
+-from distutils.version import StrictVersion
++from mininet.util import StrictVersion
+ from functools import partial
+ from optparse import OptionParser
+ from subprocess import call
+diff --git a/mininet/clean.py b/mininet/clean.py
+index d719d95..0139b97 100755
+--- a/mininet/clean.py
++++ b/mininet/clean.py
+@@ -26,7 +26,8 @@
+ 
+ from mininet.log import info
+ from mininet.term import cleanUpScreens
+-from mininet.util import decode
++from mininet.util import ( decode, cgroupV2, cgroup2Remove,
++                           CGROUP2_PARENT )
+ from mininet.net import SAP_PREFIX
+ 
+ def sh( cmd ):
+@@ -116,6 +117,14 @@ def cleanup( cls):
+         info( "*** Killing stale mininet node processes\n" )
+         killprocs( 'mininet:' )
+ 
++        # cgroup v2: CPULimitedHost groups (and processes left in them)
++        if cgroupV2() and os.path.isdir( CGROUP2_PARENT ):
++            info( "*** Removing stale CPULimitedHost cgroups\n" )
++            for name in os.listdir( CGROUP2_PARENT ):
++                path = os.path.join( CGROUP2_PARENT, name )
++                if os.path.isdir( path ):
++                    cgroup2Remove( path, kill=True )
++
+         info( "*** Shutting down stale tunnels\n" )
+         killprocs( 'Tunnel=Ethernet' )
+         killprocs( '.ssh/mn')
+diff --git a/mininet/fault_injectors.py b/mininet/fault_injectors.py
+index b03f680..aade95d 100644
+--- a/mininet/fault_injectors.py
++++ b/mininet/fault_injectors.py
+@@ -22,6 +22,7 @@
+ """
+ import asyncio
+ import json
++import os
+ import re
+ import subprocess
+ import pathlib
+@@ -719,6 +720,9 @@ def _get_cgroup_name(self):
+             log.debug("cgroups for pid " + str(pid) + ": " + cgroup_path)
+             cpu_cgroup_pattern = r"^(\d*):cpu,cpuacct:/(.*)$"
+             match = re.search(cpu_cgroup_pattern, cgroup_path, re.MULTILINE)
++            if match is None:
++                # cgroup v2 (unified hierarchy): single line "0::/<path>"
++                match = re.search(r"^(0)::/(.*)$", cgroup_path, re.MULTILINE)
+             cgroup_name = match.group(2)
+             return cgroup_name
+ 
+@@ -765,6 +769,18 @@ def execute_command_for_node(self, pid_of_node, command_to_execute, enable):
+             log.debug("Command '%s' terminated correctly (retcode %s)\n" % (full_command, retcode))
+ 
+     def _get_cgroup_size(self):
++        cpu_max = f"/sys/fs/cgroup/{self.cpu_cgroup_name}/cpu.max"
++        if os.path.exists("/sys/fs/cgroup/cgroup.controllers"):
++            # cgroup v2: cpu.max contains "<quota|max> <period>"
++            try:
++                with open(cpu_max) as f:
++                    cpu_quota, cpu_period = f.read().split()
++            except (OSError, ValueError):
++                log.error("Tried to find cgroup size for " + self.cpu_cgroup_name + ", but couldn't find it\n")
++                return None
++            if cpu_quota == "max":
++                return float(os.cpu_count())
++            return int(cpu_quota) / int(cpu_period)
+         size_command = ["cgget", "-g", "cpu", self.cpu_cgroup_name]
+         try:
+             cgroup_process = subprocess.run(size_command, text=True, capture_output=True)
+diff --git a/mininet/net.py b/mininet/net.py
+index 4508fb2..d09609f 100755
+--- a/mininet/net.py
++++ b/mininet/net.py
+@@ -109,7 +109,8 @@
+ from mininet.link import Link, Intf
+ from mininet.util import ( quietRun, fixLimits, numCores, ensureRoot,
+                            macColonHex, ipStr, ipParse, netParse, ipAdd,
+-                           waitListening, BaseString )
++                           waitListening, BaseString, cgroupV2,
++                           CGROUP2_PARENT )
+ from mininet.term import cleanUpScreens, makeTerms
+ 
+ from subprocess import Popen
+@@ -992,18 +993,27 @@ def runCpuLimitTest( self, cpu, duration=5 ):
+                 pids[ h ].append( h.cmd( 'echo $!' ).strip() )
+         outputs = {}
+         time = {}
++
++        def cpuUsage( host ):
++            "CPU time (ns) used by the host's cgroup"
++            if cgroupV2():
++                with open( '%s/%s/cpu.stat' % ( CGROUP2_PARENT, host ) ) as f:
++                    for line in f:
++                        key, value = line.split()
++                        if key == 'usage_usec':
++                            return float( value ) * 1000
++            with open( '/sys/fs/cgroup/cpuacct/%s/cpuacct.usage' %
++                       host, 'r' ) as f:
++                return float( f.read() )
++
+         # get the initial cpu time for each host
+         for host in hosts:
+             outputs[ host ] = []
+-            with open( '/sys/fs/cgroup/cpuacct/%s/cpuacct.usage' %
+-                       host, 'r' ) as f:
+-                time[ host ] = float( f.read() )
++            time[ host ] = cpuUsage( host )
+         for _ in range( duration ):
+             sleep( 1 )
+             for host in hosts:
+-                with open( '/sys/fs/cgroup/cpuacct/%s/cpuacct.usage' %
+-                           host, 'r' ) as f:
+-                    readTime = float( f.read() )
++                readTime = cpuUsage( host )
+                 outputs[ host ].append( ( ( readTime - time[ host ] )
+                                         / 1000000000 ) / cores * 100 )
+                 time[ host ] = readTime
+diff --git a/mininet/node.py b/mininet/node.py
+index a11c6b9..38078b8 100755
+--- a/mininet/node.py
++++ b/mininet/node.py
+@@ -59,7 +59,6 @@
+ import select
+ import docker
+ import json
+-from distutils.version import StrictVersion
+ from re import findall
+ from subprocess import Popen, PIPE, check_output
+ from sys import exit  # pylint: disable=redefined-builtin
+@@ -67,7 +66,8 @@
+ 
+ from mininet.log import info, error, warn, debug
+ from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
+-                           numCores, retry, mountCgroups, BaseString, decode,
++                           numCores, retry, mountCgroups, StrictVersion,
++                           cgroupV2, cgroup2Remove, CGROUP2_PARENT, BaseString, decode,
+                            encode, getincrementaldecoder, Python3, which )
+ from mininet.moduledeps import moduleDeps, pathCheck, TUN
+ from mininet.link import Link, Intf, TCIntf, OVSIntf
+@@ -1182,46 +1182,79 @@ def update_resources(self, **kwargs):
+     def updateCpuLimit(self, cpu_quota=-1, cpu_period=-1, cpu_shares=-1, cores=None):
+         """
+         Update CPU resource limitations.
+-        This method allows to update resource limitations at runtime by bypassing the Docker API
+-        and directly manipulating the cgroup options.
++        This method allows to update resource limitations at runtime.
++        It uses the Docker API (docker update), so it works with both
++        cgroup v1 and cgroup v2 hosts.
+         Args:
+-            cpu_quota: cfs quota us
++            cpu_quota: cfs quota us (-1: unlimited)
+             cpu_period: cfs period us
+             cpu_shares: cpu shares
+             cores: specifies which cores should be accessible for the container e.g. "0-2,16" represents
+                 Cores 0, 1, 2, and 16
+         """
+         # see https://www.kernel.org/doc/Documentation/scheduler/sched-bwc.txt
+-
++        update = {}
+         # also negative values can be set for cpu_quota (uncontrained setting)
+         # just check if value is a valid integer
+         if isinstance(cpu_quota, int):
+-            self.resources['cpu_quota'] = self.cgroupSet("cfs_quota_us", cpu_quota)
++            update['cpu_quota'] = cpu_quota
+         if cpu_period >= 0:
+-            self.resources['cpu_period'] = self.cgroupSet("cfs_period_us", cpu_period)
++            update['cpu_period'] = cpu_period
+         if cpu_shares >= 0:
+-            self.resources['cpu_shares'] = self.cgroupSet("shares", cpu_shares)
++            update['cpu_shares'] = cpu_shares
+         if cores:
+-            self.dcli.update_container(self.dc, cpuset_cpus=cores)
+-            # quota, period ad shares can also be set by this line. Usable for future work.
++            update['cpuset_cpus'] = cores
++        self._dockerUpdate(update)
+ 
+     def updateMemoryLimit(self, mem_limit=-1, memswap_limit=-1):
+         """
+         Update Memory resource limitations.
+-        This method allows to update resource limitations at runtime by bypassing the Docker API
+-        and directly manipulating the cgroup options.
++        This method allows to update resource limitations at runtime.
++        It uses the Docker API (docker update), so it works with both
++        cgroup v1 and cgroup v2 hosts.
+ 
+         Args:
+             mem_limit: memory limit in bytes
+-            memswap_limit: swap limit in bytes
++            memswap_limit: memory+swap limit in bytes (-1: unlimited swap)
+ 
+         """
+-        # see https://www.kernel.org/doc/Documentation/scheduler/sched-bwc.txt
++        update = {}
+         if mem_limit >= 0:
+-            self.resources['mem_limit'] = self.cgroupSet("limit_in_bytes", mem_limit, resource="memory")
+-        if memswap_limit >= 0:
+-            self.resources['memswap_limit'] = self.cgroupSet("memsw.limit_in_bytes", memswap_limit, resource="memory")
+-
++            update['mem_limit'] = mem_limit
++        if isinstance(memswap_limit, int) and memswap_limit != 0:
++            update['memswap_limit'] = memswap_limit
++        self._dockerUpdate(update)
++
++    # docker-py update_container argument -> docker inspect HostConfig key
++    _updateKeys = {
++        'cpu_quota': 'CpuQuota', 'cpu_period': 'CpuPeriod',
++        'cpu_shares': 'CpuShares', 'cpuset_cpus': 'CpusetCpus',
++        'mem_limit': 'Memory', 'memswap_limit': 'MemorySwap'}
++
++    def _dockerUpdate(self, update):
++        """
++        Apply resource changes through the Docker API and store the values
++        Docker reports back (inspect HostConfig) in self.resources.
++        Unlimited values (-1 / 0 / '') are stored as None.
++        """
++        if not update:
++            return
++        debug("%s: docker update %s\n" % (self.name, update))
++        try:
++            self.dcli.update_container(self.dc, **update)
++            hconf = self.dcli.inspect_container(self.dc)['HostConfig']
++        except docker.errors.APIError as e:
++            error("%s: problem updating resources %s: %s\n"
++                  % (self.name, update, e))
++            return
++        for key in update:
++            value = hconf.get(self._updateKeys[key])
++            if value in (-1, 0, '', None):
++                value = None
++            elif value != update[key] and update[key] not in (-1, 0):
++                error('*** error: %s: %s set to %s instead of %s\n'
++                      % (self.name, key, value, update[key]))
++            self.resources[key] = value
+ 
+     def cgroupSet(self, param, value, resource='cpu'):
+         """
+@@ -1277,11 +1310,20 @@ def __init__( self, name, sched='cfs', **kwargs ):
+         if not CPULimitedHost.inited:
+             CPULimitedHost.init()
+         # Create a cgroup and move shell into it
+-        self.cgroup = 'cpu,cpuacct,cpuset:/' + self.name
+-        errFail( 'cgcreate -g ' + self.cgroup )
+-        # We don't add ourselves to a cpuset because you must
+-        # specify the cpu and memory placement first
+-        errFail( 'cgclassify -g cpu,cpuacct:/%s %s' % ( self.name, self.pid ) )
++        if cgroupV2():
++            # cgroup v2: one group per host below CGROUP2_PARENT
++            self.cgroup = CGROUP2_PARENT + '/' + self.name
++            if not os.path.isdir( self.cgroup ):
++                os.mkdir( self.cgroup )
++            with open( self.cgroup + '/cgroup.procs', 'w' ) as f:
++                f.write( str( self.pid ) )
++        else:
++            self.cgroup = 'cpu,cpuacct,cpuset:/' + self.name
++            errFail( 'cgcreate -g ' + self.cgroup )
++            # We don't add ourselves to a cpuset because you must
++            # specify the cpu and memory placement first
++            errFail( 'cgclassify -g cpu,cpuacct:/%s %s' %
++                     ( self.name, self.pid ) )
+         # BL: Setting the correct period/quota is tricky, particularly
+         # for RT. RT allows very small quotas, but the overhead
+         # seems to be high. CFS has a mininimum quota of 1 ms, but
+@@ -1292,8 +1334,59 @@ def __init__( self, name, sched='cfs', **kwargs ):
+             self.checkRtGroupSched()
+             self.rtprio = 20
+ 
++    # cgroup v2: cpu.max holds "<quota|max> <period>" in one file
++    def _cgroup2Path( self, param, resource ):
++        "Return cgroup v2 file for a v1 resource.param name"
++        if resource == 'cpu' and param in ( 'cfs_quota_us', 'cfs_period_us' ):
++            return self.cgroup + '/cpu.max'
++        if resource == 'cpuset' and param in ( 'cpus', 'mems' ):
++            return self.cgroup + '/cpuset.' + param
++        raise Exception( 'cgroup v2: %s.%s is not supported'
++                         % ( resource, param ) )
++
++    def _cgroup2Set( self, param, value, resource ):
++        "Write a cgroup v2 value given as cgroup v1 resource.param"
++        path = self._cgroup2Path( param, resource )
++        if path.endswith( '/cpu.max' ):
++            quota, period = self._cgroup2Read( path ).split()
++            if param == 'cfs_quota_us':
++                quota = 'max' if int( value ) < 0 else str( value )
++            else:
++                period = str( value )
++            value = '%s %s' % ( quota, period )
++        with open( path, 'w' ) as f:
++            f.write( str( value ) )
++
++    @staticmethod
++    def _cgroup2Read( path ):
++        "Read a cgroup v2 file"
++        with open( path ) as f:
++            return f.read().strip()
++
++    def _cgroup2Get( self, param, resource ):
++        "Read a cgroup v2 value given as cgroup v1 resource.param"
++        path = self._cgroup2Path( param, resource )
++        value = self._cgroup2Read( path )
++        if path.endswith( '/cpu.max' ):
++            quota, period = value.split()
++            if param == 'cfs_period_us':
++                return int( period )
++            return -1 if quota == 'max' else int( quota )
++        return value
++
+     def cgroupSet( self, param, value, resource='cpu' ):
+         "Set a cgroup parameter and return its value"
++        if cgroupV2():
++            try:
++                self._cgroup2Set( param, value, resource )
++            except OSError as e:
++                error( '*** error: cgroupSet: %s.%s=%s: %s\n'
++                       % ( resource, param, value, e ) )
++            nvalue = self._cgroup2Get( param, resource )
++            if str( nvalue ) != str( value ):
++                error( '*** error: cgroupSet: %s set to %s instead of %s\n'
++                       % ( param, nvalue, value ) )
++            return nvalue
+         cmd = 'cgset -r %s.%s=%s /%s' % (
+             resource, param, value, self.name )
+         quietRun( cmd )
+@@ -1305,6 +1398,8 @@ def cgroupSet( self, param, value, resource='cpu' ):
+ 
+     def cgroupGet( self, param, resource='cpu' ):
+         "Return value of cgroup parameter"
++        if cgroupV2():
++            return self._cgroup2Get( param, resource )
+         cmd = 'cgget -r %s.%s /%s' % (
+             resource, param, self.name )
+         return int( quietRun( cmd ).split()[ -1 ] )
+@@ -1312,6 +1407,8 @@ def cgroupGet( self, param, resource='cpu' ):
+     def cgroupDel( self ):
+         "Clean up our cgroup"
+         # info( '*** deleting cgroup', self.cgroup, '\n' )
++        if cgroupV2():
++            return cgroup2Remove( self.cgroup )
+         _out, _err, exitcode = errRun( 'cgdelete -r ' + self.cgroup )
+         # Sometimes cgdelete returns a resource busy error but still
+         # deletes the group; next attempt will give "no such file"
+@@ -1433,9 +1530,10 @@ def setCPUs( self, cores, mems=0 ):
+         self.cgroupSet( resource='cpuset', param='mems',
+                         value=mems)
+         # We have to do this here after we've specified
+-        # cpus and mems
+-        errFail( 'cgclassify -g cpuset:/%s %s' % (
+-                 self.name, self.pid ) )
++        # cpus and mems (cgroup v2: the shell is already in our group)
++        if not cgroupV2():
++            errFail( 'cgclassify -g cpuset:/%s %s' % (
++                     self.name, self.pid ) )
+ 
+     # pylint: disable=arguments-differ
+     def config( self, cpu=-1, cores=None, **params ):
+diff --git a/mininet/test/test_containernet.py b/mininet/test/test_containernet.py
+index b67aeb5..5ac309c 100755
+--- a/mininet/test/test_containernet.py
++++ b/mininet/test/test_containernet.py
+@@ -698,6 +698,11 @@ def testNATWithTreeTopology( self ):
+         dockerClient.networks.create(
+             "test-nat-network",
+             driver="bridge",
++            # Docker >= 28 drops traffic routed to containers from other
++            # interfaces (raw PREROUTING); this network must be reachable
++            # from the Mininet NAT, so disable that protection for it.
++            options={"com.docker.network.bridge.gateway_mode_ipv4":
++                     "nat-unprotected"},
+             labels={"com.containernet": ""}
+         )
+         otherContainer = dockerClient.containers.run(
+diff --git a/mininet/util.py b/mininet/util.py
+index 4d10b30..7cc2d98 100755
+--- a/mininet/util.py
++++ b/mininet/util.py
+@@ -3,6 +3,7 @@
+ import codecs
+ import os
+ import re
++import signal
+ import sys
+ 
+ from fcntl import fcntl, F_GETFL, F_SETFL
+@@ -549,8 +550,78 @@ def fixLimits():
+     # pylint: enable=broad-except
+ 
+ 
++def StrictVersion( version ):
++    """Comparable version key; drop-in for the removed
++       distutils.version.StrictVersion (Python >= 3.12)"""
++    return tuple( int( n ) for n in re.findall( r'\d+', str( version ) ) )
++
++# cgroup v2 (unified hierarchy, e.g. Ubuntu >= 21.10, only option on 26.04):
++# CPULimitedHost cgroups are created below this parent group
++CGROUP2_ROOT = '/sys/fs/cgroup'
++CGROUP2_PARENT = CGROUP2_ROOT + '/mininet'
++
++def cgroupV2():
++    "Is the cgroup v2 unified hierarchy mounted on /sys/fs/cgroup?"
++    return os.path.exists( CGROUP2_ROOT + '/cgroup.controllers' )
++
++def cgroup2EnableControllers( path, controllers=( 'cpu', 'cpuset' ) ):
++    "Enable cgroup v2 controllers for the children of path"
++    with open( path + '/cgroup.controllers' ) as f:
++        available = f.read().split()
++    missing = [ c for c in controllers if c not in available ]
++    if missing:
++        raise Exception( 'cgroup v2 controllers not available in %s: %s'
++                         % ( path, ' '.join( missing ) ) )
++    with open( path + '/cgroup.subtree_control', 'w' ) as f:
++        f.write( ' '.join( '+' + c for c in controllers ) )
++
++def cgroup2Remove( path, kill=False ):
++    """Remove a cgroup v2 group. rmdir fails while it still contains
++       processes, so first move them to the root group (like cgroup v1
++       'cgdelete -r'), or kill them if kill=True.
++       returns True if the group no longer exists"""
++    try:
++        with open( path + '/cgroup.procs' ) as f:
++            pids = f.read().split()
++    except FileNotFoundError:
++        return True
++    for pid in pids:
++        try:
++            if kill:
++                os.kill( int( pid ), signal.SIGKILL )
++            else:
++                with open( CGROUP2_ROOT + '/cgroup.procs', 'w' ) as f:
++                    f.write( pid )
++        except ( OSError, ValueError ):
++            pass  # process already gone
++    # killed processes leave the group asynchronously: wait (max 1 s)
++    # until the kernel reports it empty
++    for _ in range( 20 ):
++        try:
++            with open( path + '/cgroup.events' ) as f:
++                if 'populated 0' in f.read():
++                    break
++        except OSError:
++            break
++        sleep( .05 )
++    try:
++        os.rmdir( path )
++    except FileNotFoundError:
++        pass
++    except OSError:
++        return False
++    return True
++
+ def mountCgroups():
+     "Make sure cgroups file system is mounted"
++    if cgroupV2():
++        # Parent group for CPULimitedHost cgroups, with cpu and cpuset
++        # controllers enabled for its children
++        cgroup2EnableControllers( CGROUP2_ROOT )
++        if not os.path.isdir( CGROUP2_PARENT ):
++            os.mkdir( CGROUP2_PARENT )
++        cgroup2EnableControllers( CGROUP2_PARENT )
++        return
+     mounts = quietRun( 'grep cgroup /proc/mounts' )
+     cgdir = '/sys/fs/cgroup'
+     csdir = cgdir + '/cpuset'
+diff --git a/mnexec.c b/mnexec.c
+index d3f173d..ac6a18f 100755
+--- a/mnexec.c
++++ b/mnexec.c
+@@ -74,6 +74,20 @@ void cgroup(char *gname)
+     pid_t pid = getpid();
+     int count = 0;
+     validate(gname);
++    /* cgroup v2 (unified hierarchy): one group per host below
++       /sys/fs/cgroup/mininet, see CGROUP2_PARENT in mininet/util.py */
++    if (access("/sys/fs/cgroup/cgroup.controllers", F_OK) == 0) {
++        FILE *f;
++        snprintf(path, PATH_MAX, "/sys/fs/cgroup/mininet/%s/cgroup.procs",
++                 gname);
++        f = fopen(path, "w");
++        if (f) {
++            count++;
++            fprintf(f, "%d\n", pid);
++            fclose(f);
++        }
++        groups[0] = NULL;  /* skip the cgroup v1 paths below */
++    }
+     for (gptr = groups; *gptr; gptr++) {
+         FILE *f;
+         snprintf(path, PATH_MAX, "/sys/fs/cgroup/%s/%s/tasks",
+diff --git a/util/install.sh b/util/install.sh
+index 284993a..40afafa 100755
+--- a/util/install.sh
++++ b/util/install.sh
+@@ -236,7 +236,9 @@ function of {
+ 
+     # Resume the install:
+     ./boot.sh
+-    ./configure
++    # GCC >= 14 (Ubuntu 24.10+/26.04) turns some legacy warnings into errors
++    # and GCC 15 defaults to C23: build this old code as gnu11, permissively.
++    ./configure CFLAGS="-g -O2 -std=gnu11 -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=implicit-function-declaration"
+     make
+     sudo make install
+     cd $BUILD_DIR
