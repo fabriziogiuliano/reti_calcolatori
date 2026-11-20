@@ -29,8 +29,8 @@ git clone https://github.com/fabriziogiuliano/reti_calcolatori.git
 
 cd containernet
 git checkout 8e0aabef8f23def3961b30897dd486191d9bd693
-git apply --check ../reti_calcolatori/CONTAINERNET/12_0_INSTALL/containernet-ubuntu-26.04.patch
-git apply ../reti_calcolatori/CONTAINERNET/12_0_INSTALL/containernet-ubuntu-26.04.patch
+git apply --check ../reti_calcolatori/12_CONTAINERNET/12_0_INSTALL/containernet-ubuntu-26.04.patch
+git apply ../reti_calcolatori/12_CONTAINERNET/12_0_INSTALL/containernet-ubuntu-26.04.patch
 cd ..
 ```
 
