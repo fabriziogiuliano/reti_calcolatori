@@ -1,43 +1,53 @@
 # Containernet on Ubuntu 26.04
 
-Installation guide for [Containernet](https://containernet.github.io/) on **Ubuntu 26.04 LTS**, using a patch that adds 26.04 support and a **conda** environment.
+Installation guide for [Containernet](https://containernet.github.io/) on **Ubuntu 26.04 LTS**. Containernet officially supports only Ubuntu 22.04 and 24.04: the patch in this folder adds 26.04 support.
 
 ## Requirements
 
 - Ubuntu 26.04 LTS (the Server edition is fine), with a user that can run `sudo`
 - at least 2 CPUs, 4 GB of RAM and 30 GB of disk
-- conda, installed as in [00_PYTHON_ENVIRONMENT_SETUP](../../00_PYTHON_ENVIRONMENT_SETUP) (check with `conda --version`)
 
 ## Installation
 
-Containernet is installed in your home directory, outside the course repository.
+### 1. conda
 
-### 1. Base packages
+conda must be installed as in [00_PYTHON_ENVIRONMENT_SETUP](../../00_PYTHON_ENVIRONMENT_SETUP), Step 1. Check:
+
+```bash
+conda --version
+```
+
+### 2. Create the conda environment `cn`
+
+```bash
+conda create -n cn python=3.14 -y
+conda activate cn
+```
+
+Keep this terminal open: all the next steps run in it, with `cn` active.
+
+### 3. Base packages
 
 ```bash
 sudo apt-get update
 sudo apt-get install -y git ansible
 ```
 
-### 2. Download Containernet and apply the patch
-
-Start from the directory of this README, inside your clone of `reti_calcolatori`:
+### 4. Download Containernet and apply the patch
 
 ```bash
-PATCH="$PWD/containernet-ubuntu-26.04.patch"
-
 cd ~
+curl -fsSLO https://raw.githubusercontent.com/fabriziogiuliano/reti_calcolatori/main/12_CONTAINERNET/12_0_INSTALL/containernet-ubuntu-26.04.patch
 git clone https://github.com/containernet/containernet.git
-cd containernet
+cd ~/containernet
 git checkout 8e0aabef8f23def3961b30897dd486191d9bd693
-git apply --check "$PATCH"
-git apply "$PATCH"
-cd ~
+git apply --check ~/containernet-ubuntu-26.04.patch
+git apply ~/containernet-ubuntu-26.04.patch
 ```
 
-The patch only applies to the commit in the `git checkout` line. If `git apply --check` fails, make sure you ran the checkout and do not continue.
+`git apply --check` must print nothing. If it prints an error, do not continue.
 
-### 3. Install the dependencies with Ansible
+### 5. Install the system dependencies with Ansible
 
 ```bash
 cd ~
@@ -48,17 +58,14 @@ This installs Docker CE, Open vSwitch, the Mininet dependencies and the OpenFlow
 
 If it stops and you need to run it again, first delete the directory created by the installer: `sudo rm -rf ~/openflow`.
 
-### 4. Conda environment
+### 6. Install Containernet in `cn`
 
 ```bash
-conda create -n cn python=3.14 -y
-conda activate cn
-
 cd ~/containernet
 pip install .
 ```
 
-### 5. Check
+### 7. Check
 
 ```bash
 cd ~/containernet
@@ -67,4 +74,13 @@ sudo "$CONDA_PREFIX/bin/python" examples/containernet_example.py
 
 You should see `*** Results: 0% dropped (2/2 received)`. At the `containernet>` prompt, type `exit`.
 
-Always run scripts with `sudo "$CONDA_PREFIX/bin/python"`, with the `cn` environment active.
+## Running scripts
+
+In every new terminal:
+
+```bash
+conda activate cn
+sudo "$CONDA_PREFIX/bin/python" your_script.py
+```
+
+`sudo` is needed to create the virtual hosts, switches and links; `$CONDA_PREFIX/bin/python` is the Python of `cn`, which `sudo` would not find by itself.
