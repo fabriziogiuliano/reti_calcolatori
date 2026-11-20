@@ -24,16 +24,15 @@ Open three terminals (windows, tabs or tmux panes: as you like): one for the **s
 
 Start `tcp_server.py` in the server terminal. Leave it running for all the exercises.
 
-On Linux the sniffers need root: start them with `sudo $(which python)` instead of `python`.
+The sniffers need root: start them with `sudo $(which python)` instead of `python`.
 
 > [!WARNING]
-> ⚠️ **Linux shows every loopback packet twice.** On Linux the interface `lo` passes each packet to the sniffer two times: when it leaves and when it comes back in. Without care, every line of the output appears twice.
+> ⚠️ **Every loopback packet is seen twice.** The interface `lo` passes each packet to the sniffer two times: when it leaves and when it comes back in. Without care, every line of the output appears twice.
 >
-> The sniffers already handle it: on Linux their capture filter is `tcp port 12000 and inbound`, which keeps only the incoming copy. If you capture on `lo` with your own script or with `tcpdump`, add `and inbound` too:
+> The sniffers already handle it: their capture filter is `tcp port 12000 and inbound`, which keeps only the incoming copy. If you capture on `lo` with your own script or with `tcpdump`, add `and inbound` too:
 > ```
 > sudo tcpdump -i lo -n 'tcp port 12000 and inbound'
 > ```
-> macOS (`lo0`) does not have this problem.
 
 ---
 
@@ -41,11 +40,7 @@ On Linux the sniffers need root: start them with `sudo $(which python)` instead 
 
 The emulator makes data packets (to port 12000) lossy and ACKs (from port 12000) slow. All its commands need `sudo`.
 
-> **Preview.** Here `tc` (Linux) and `dnctl` (macOS) are only a tool: copy the commands as they are. We will study network emulation in much more detail later in the course.
-
-Read **only the part for your system**.
-
-### Linux / WSL
+> **Preview.** Here `tc` is only a tool: copy the commands as they are. We will study network emulation in much more detail later in the course.
 
 **Start** (once). All values start at 0: no loss, no delay.
 ```
@@ -71,37 +66,11 @@ sudo ethtool -K lo tso on gso on
 ```
 Details: [man tc](https://man7.org/linux/man-pages/man8/tc.8.html).
 
-### macOS
-
-**Start** (once). All values start at 0: no loss, no delay.
-```
-sudo dnctl pipe 1 config plr 0
-sudo dnctl pipe 2 config delay 0
-printf "dummynet out on lo0 proto tcp from any to any port 12000 pipe 1\ndummynet out on lo0 proto tcp from any port 12000 to any pipe 2\n" | sudo pfctl -f -
-sudo pfctl -e
-```
-`pfctl` prints some warnings (`flushing of rules`, `No ALTQ`): they are normal.
-
-**Change** loss and delay (here: data loss 20 %, ACK delay 100 ms). Each exercise tells you the values.
-```
-sudo dnctl pipe 1 config plr 0.2
-sudo dnctl pipe 2 config delay 100
-```
-The first line sets the data loss (`plr` = packet loss rate, from 0 to 1), the second one the ACK delay (ms).
-
-**Stop** (at the end).
-```
-sudo pfctl -f /etc/pf.conf
-sudo pfctl -d
-sudo dnctl -q flush
-```
-Details: [man dnctl](https://keith.github.io/xcode-man-pages/dnctl.8.html).
-
 ### Check that it works
 
 Do not skip this check: if the emulator is off, nothing in the exercises will make sense.
 
-1. With the **Change** commands of your system, set an ACK delay of **500 ms** (loss 0).
+1. With the **Change** commands, set an ACK delay of **500 ms** (loss 0).
 2. Start `tcp_client.py --n 10 --interval 0` in the client terminal.
 
 **Client output** (emulator working)
@@ -112,7 +81,7 @@ all data delivered after 0.50 s
 ```
 The second time must be **about 0.5 s larger** than the first one: the ACKs wait 500 ms in the emulator.
 
-If both times are `0.00 s`, the emulator is **not** active: run the **Start** commands again and repeat the check. On macOS this happens after every reboot, and after the **Stop** commands.
+If both times are `0.00 s`, the emulator is **not** active: run the **Start** commands again and repeat the check.
 
 3. When it works, set the ACK delay back to **0**.
 
@@ -120,7 +89,7 @@ If both times are `0.00 s`, the emulator is **not** active: run the **Start** co
 
 ## 1. SACK
 
-**Step 1.** With the **Change** commands of your system, set: data loss **20 %**, ACK delay **0**.
+**Step 1.** With the **Change** commands, set: data loss **20 %**, ACK delay **0**.
 
 **Step 2.** Start `01_sack_sniffer.py` in the sniffer terminal.
 
@@ -155,7 +124,7 @@ What to find in your output:
 
 ## 2. Timestamps
 
-**Step 1.** With the **Change** commands of your system, set: data loss **0**, ACK delay **100 ms**.
+**Step 1.** With the **Change** commands, set: data loss **0**, ACK delay **100 ms**.
 
 **Step 2.** Stop the sniffer (Ctrl+C) and start `02_01_ts_sniffer.py` in the sniffer terminal.
 
@@ -209,7 +178,7 @@ What to find in your output:
 - Before the first ACK, `RTO` = 1000 (1 s, the starting value).
 - At each ACK the `RTO` goes down: 301, 251, 214, 186 … until ≈ 104 ms, close to the real RTT (100 ms).
 
-**Step 5.** Start the client again with `--n 100 --interval 0.1`. While it is sending, raise the ACK delay to **300 ms** (Change commands of your system). The `RTO` goes up quickly, then settles close to 300 ms.
+**Step 5.** Start the client again with `--n 100 --interval 0.1`. While it is sending, raise the ACK delay to **300 ms** (Change commands). The `RTO` goes up quickly, then settles close to 300 ms.
 
 ---
 

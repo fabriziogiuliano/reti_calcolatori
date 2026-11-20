@@ -15,7 +15,7 @@ How fast can we send data? It depends on the **channel**, the link speed (**rate
 
 ## Setup
 
-Linux or WSL only (the emulator uses `tc`; it needs `sudo`).
+The emulator uses `tc`: it needs `sudo`.
 
 **Step 1.** Install iperf (version 2: the commands below are for iperf 2, not iperf3):
 ```bash

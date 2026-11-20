@@ -2,7 +2,7 @@
 
 curl is a program that talks HTTP (and many other protocols) from the command line. It works like a browser without graphics: it sends a request, receives the response, and shows you all of it, including what a browser hides.
 
-Why curl? It is a professional tool, open source since 1998 and already installed on macOS, Windows and Linux. Developers use it every day to test web APIs, system administrators to check sites and servers, and its library (libcurl) runs inside phones, cars and countless programs. Browsers can even turn any request into a curl command: in the developer tools, *Network* tab, right click on a request, then *Copy as cURL* ([how it works](https://everything.curl.dev/cmdline/copyas.html)). More on the project: [curl.se](https://curl.se/).
+Why curl? It is a professional tool, open source since 1998 and already installed on Ubuntu. Developers use it every day to test web APIs, system administrators to check sites and servers, and its library (libcurl) runs inside phones, cars and countless programs. Browsers can even turn any request into a curl command: in the developer tools, *Network* tab, right click on a request, then *Copy as cURL* ([how it works](https://everything.curl.dev/cmdline/copyas.html)). More on the project: [curl.se](https://curl.se/).
 
 We start from the simplest command and add one option at a time. At the end you will know every option used in the lab folders, from `02_01` to `02_06`.
 

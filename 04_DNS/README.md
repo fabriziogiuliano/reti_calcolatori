@@ -1,8 +1,8 @@
-# DNS from the shell (Linux / macOS)
+# DNS from the shell
 
 Reference: Kurose & Ross, *Computer Networking*, Ch. 2 (Sec. 2.4)
 
-Linux install: `sudo apt install dnsutils` (macOS: already installed)
+Install: `sudo apt install bind9-dnsutils`
 
 Two tools are enough: `host` (simple answers) and `dig` (shows the DNS records).
 

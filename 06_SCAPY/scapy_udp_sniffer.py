@@ -4,7 +4,7 @@ from scapy.all import sniff, UDP
 
 SERVER_PORT = 8888
 
-IFACE = "lo0"
+IFACE = "lo"
 
 def analizza_pacchetto_udp(pkt):
     try:

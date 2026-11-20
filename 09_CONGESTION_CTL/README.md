@@ -23,12 +23,12 @@ RTT ≈ 100 ms.
 
 | Option | What it does (default) |
 |---|---|
-| `--cc` | algorithm, `reno`, `cubic` or `bbr`, **Linux only** (cubic) |
+| `--cc` | algorithm, `reno`, `cubic` or `bbr` (cubic) |
 | `--time` | seconds of sending (30) |
 | `--every` | seconds between two samples (0.05) |
 | `--out` | CSV file for the samples (cwnd.csv) |
 
-Output columns: `time` = absolute time ([Unix time](https://docs.python.org/3/library/time.html#time.time): seconds since 1 Jan 1970), `cwnd` and `ssthresh` in segments (MSS = 1000 bytes), `rtt` = smoothed RTT in ms, `bytes` = bytes delivered so far (Linux: acked by the server; macOS: sent minus retransmitted). The plot scripts put time 0 at the first sample of all their files: runs made one after the other appear one after the other, clients started together appear together. Before the first loss `ssthresh` is only a placeholder (0 or a big number): ignore it.
+Output columns: `time` = absolute time ([Unix time](https://docs.python.org/3/library/time.html#time.time): seconds since 1 Jan 1970), `cwnd` and `ssthresh` in segments (MSS = 1000 bytes), `rtt` = smoothed RTT in ms, `bytes` = bytes acked by the server so far. The plot scripts put time 0 at the first sample of all their files: runs made one after the other appear one after the other, clients started together appear together. Before the first loss `ssthresh` is only a placeholder (0 or a big number): ignore it.
 
 ---
 
@@ -37,7 +37,7 @@ Output columns: `time` = absolute time ([Unix time](https://docs.python.org/3/li
 - **Reno**: in congestion avoidance `cwnd` grows by 1 MSS per RTT (a straight line). At a loss (3 duplicate ACKs): `ssthresh = cwnd / 2`, `cwnd = ssthresh`. Result: a **sawtooth**.
 - **Cubic**: at a loss `cwnd` goes down only to **0.7 ·** `cwnd`. Then it grows as a cubic function of the time since the loss: fast when far from the old maximum, slow near it (concave), then fast again to look for more bandwidth (convex).
 
-> **Reno or NewReno?** macOS calls it NewReno, Linux calls it `reno`: both are NewReno. Same `cwnd` rules as Reno; the only difference is fast recovery when **more than one** segment is lost in the same window: Reno exits at the first new ACK, NewReno stays until all of them are retransmitted.
+> **Reno or NewReno?** Linux calls it `reno`, but it is NewReno. Same `cwnd` rules as Reno; the only difference is fast recovery when **more than one** segment is lost in the same window: Reno exits at the first new ACK, NewReno stays until all of them are retransmitted.
 
 ---
 
@@ -55,7 +55,7 @@ Start the channel in the client terminal: `./emulate_channel.sh start` (see belo
 
 The emulator is the **channel** of the experiment: the data packets (to port 12000) get a router queue and a link; the ACKs (from port 12000) get the same queue and link, then a cable that adds the delay.
 
-### Linux / WSL: `emulate_channel.sh`
+### `emulate_channel.sh`
 
 One script does everything: **you only choose the channel, then look at the results**.
 
@@ -102,46 +102,13 @@ It asks for the `sudo` password. With `RATE` other than 10 Mbit/s, give the same
 >
 > </details>
 
-> <details>
-> <summary><b>macOS</b> (click to open)</summary>
->
-> **Start** (once).
-> ```
-> sudo dnctl pipe 1 config bw 10Mbit/s queue 50
-> sudo dnctl pipe 2 config bw 10Mbit/s queue 50 delay 100
-> printf "dummynet out on lo0 proto tcp from any to any port 12000 pipe 1\ndummynet out on lo0 proto tcp from any port 12000 to any pipe 2\n" | sudo pfctl -f -
-> sudo pfctl -e
-> ```
-> In a dummynet pipe a packet goes through the router queue (`queue`, packets), then the link (`bw`), then the cable (`delay`, ms; it has no size limit). Pipe 1 = data, pipe 2 = ACKs. `pfctl` prints some warnings (`flushing of rules`, `No ALTQ`): they are normal.
->
-> **Change: random loss** (only for exercise 4).
->
-> Activate: 0.1 % of the data packets are lost.
-> ```
-> sudo dnctl pipe 1 config bw 10Mbit/s queue 50 plr 0.001
-> ```
-> Remove: back to no loss.
-> ```
-> sudo dnctl pipe 1 config bw 10Mbit/s queue 50 plr 0
-> ```
-> `plr` (packet loss rate) is the probability of losing a packet, from 0 to 1: 0.001 = 0.1 %. Always write the **whole** line: `config` replaces all the settings of the pipe, and without `bw` and `queue` the bottleneck is gone.
->
-> **Stop** (at the end).
-> ```
-> sudo pfctl -f /etc/pf.conf
-> sudo pfctl -d
-> sudo dnctl -q flush
-> ```
-> Details: [man dnctl](https://keith.github.io/xcode-man-pages/dnctl.8.html).
->
-> </details>
 
 ### Check that it works
 
 Start `cwnd_client.py --time 10` in the client terminal.
 
 - Emulator **working**: `cwnd` stays below ≈ 180 segments and falls down at each loss.
-- Emulator **not active**: `cwnd` grows to thousands of segments. Run `./emulate_channel.sh start` (macOS: the **Start** commands; needed after every reboot).
+- Emulator **not active**: `cwnd` grows to thousands of segments. Run `./emulate_channel.sh start`.
 - `cwnd` always falls around 50 or less: an old loss setting is still there. Check with `./emulate_channel.sh show`, then run `./emulate_channel.sh start` again.
 
 ---
@@ -150,30 +117,18 @@ Start `cwnd_client.py --time 10` in the client terminal.
 
 The first line of the client output tells which algorithm is in use, e.g. `congestion control: cubic`.
 
-**Linux / WSL**: per connection, with the `--cc` option of the client. No `sudo`.
+Per connection, with the `--cc` option of the client. No `sudo`.
 
 How the client does it (only to read the code):
 - `setsockopt(TCP_CONGESTION)` chooses the algorithm, `getsockopt(TCP_INFO)` returns `cwnd`, `ssthresh`, RTT and acked bytes ([man tcp](https://man7.org/linux/man-pages/man7/tcp.7.html)).
 - `struct.unpack_from("I", info, 80)` reads the 4-byte number at byte 80 of the kernel answer ([Python struct](https://docs.python.org/3/library/struct.html)).
 
-> <details>
-> <summary><b>macOS</b> (click to open)</summary>
->
-> One switch for the whole system, `--cc` is ignored. 1 = NewReno, 0 = Cubic (the default):
-> ```
-> sudo sysctl -w net.inet.tcp.use_newreno=1
-> ```
-> At the end set it back to 0.
->
-> How the client does it: `sysctl -n` reads the switch, `getsockopt(TCP_CONNECTION_INFO)` returns `cwnd` and `ssthresh` in bytes.
->
-> </details>
 
 ---
 
 ## 1. Cubic
 
-**Step 1.** Choose **Cubic** (Linux: `--cc cubic`; macOS: `use_newreno=0`).
+**Step 1.** Choose **Cubic** (`--cc cubic`).
 
 **Step 2.** Start `cwnd_client.py --cc cubic --time 40 --out cubic.csv` in the client terminal.
 
@@ -199,7 +154,7 @@ What to find in your output:
 
 ## 2. NewReno
 
-**Step 1.** Choose **NewReno** (Linux: `--cc reno`; macOS: `use_newreno=1`).
+**Step 1.** Choose **NewReno** (`--cc reno`).
 
 **Step 2.** Start `cwnd_client.py --cc reno --time 40 --out reno.csv` in the client terminal.
 
@@ -247,7 +202,7 @@ What to find in the plot:
 
 Until now every loss came from the full queue: a **congestion** loss. Now we add losses that have nothing to do with congestion (e.g. a noisy radio link): TCP cannot tell the difference.
 
-**Step 1.** Activate 0.1 % loss: `LOSS=0.1% ./emulate_channel.sh start` (macOS: the **Change: random loss** command).
+**Step 1.** Activate 0.1 % loss: `LOSS=0.1% ./emulate_channel.sh start`.
 
 **Step 2.** Repeat exercises 1 and 2 with `--out cubic_loss.csv` and `--out reno_loss.csv`.
 
@@ -260,7 +215,7 @@ What to find in the plot:
 - Both stay below the ≈ 120 segments needed to fill the link: part of the link is wasted.
 - Cubic suffers less: it falls only to 0.7 and climbs back faster.
 
-**Step 4.** Remove the random loss: `./emulate_channel.sh start` (macOS: the **Remove** command).
+**Step 4.** Remove the random loss: `./emulate_channel.sh start`.
 
 ---
 
@@ -269,8 +224,7 @@ What to find in the plot:
 Until now each algorithm had the bottleneck all for itself. Two connections can also **share** it at the same time: the server reads many clients at once.
 
 **Step 1.** In two client terminals, start one NewReno and one Cubic client a few seconds apart, with `--out reno_mix.csv` and `--out cubic_mix.csv`.
-- Linux / WSL: `--cc reno` in one, `--cc cubic` in the other.
-- macOS: the switch counts when a connection **opens**. Set `use_newreno=1`, start the first client, set `use_newreno=0`, start the second one.
+- `--cc reno` in one, `--cc cubic` in the other.
 
 **Step 2.** Start `plot_cwnd.py reno_mix.csv cubic_mix.csv --out mix.png`, then `plot_thr.py reno_mix.csv cubic_mix.csv --link 10 --out mix_thr.png`. Both clients write absolute time: in the plot the two curves line up, even if one client started a few seconds later.
 
@@ -298,7 +252,7 @@ How BBR moves in time:
 - **ProbeBW** (most of the time): a cycle of 8 RTTs, 1 at 1.25 × the rate (is there more bandwidth?), 1 at 0.75 (empty what the probe queued), 6 at 1.
 - **ProbeRTT**: if in 10 s the RTT never went down to its minimum, `cwnd` drops to 4 segments for ≈ 200 ms, to empty the queue and measure the real propagation RTT.
 
-On Linux the kernel has BBR v1; `./emulate_channel.sh start` loads it. macOS has no BBR.
+The kernel has BBR v1; `./emulate_channel.sh start` loads it.
 
 **Step 1.** Start the default channel: `./emulate_channel.sh start`.
 

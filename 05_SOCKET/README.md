@@ -1,10 +1,8 @@
-# UDP sockets with ncat (Linux / macOS)
+# UDP sockets with ncat
 
 Reference: Kurose & Ross, *Computer Networking*, Ch. 2 (Sec. 2.7) and Ch. 3 (Sec. 3.3)
 
-Install: `sudo apt install ncat tcpdump` (macOS: `brew install nmap`, ncat is part of Nmap; tcpdump is already installed)
-
-Windows: run everything inside WSL (Ubuntu), as on Linux.
+Install: `sudo apt install ncat tcpdump`
 
 A socket is identified by **IP address + port**. Here we open a UDP server and a UDP client with `ncat`, then look at the sockets from the operating system.
 
@@ -18,7 +16,7 @@ A socket is identified by **IP address + port**. Here we open a UDP server and a
 | `lsof -i UDP:8888` | list the open sockets that use UDP port 8888 | 2 |
 | `lsof -n` | show IP addresses, do not translate them into names | 2 |
 | `lsof -P` | show port numbers, do not translate them into service names | 2 |
-| `tcpdump -i lo` | capture on the loopback interface (`127.0.0.1`); on macOS it is called `lo0` | 3 |
+| `tcpdump -i lo` | capture on the loopback interface (`127.0.0.1`) | 3 |
 | `tcpdump -n` | show IP addresses and port numbers, do not translate them into names | 3 |
 | `tcpdump -A` | also print the content of each packet as text | 3 |
 | `udp port 8888` | filter: capture only UDP packets to or from port 8888 | 3 |
@@ -82,21 +80,6 @@ ncat -u -l -k 8888
 Now you can close and reopen the client as many times as you want: every new client reaches the server.
 
 > [!WARNING]
-> <details>
-> <summary><b>Troubleshooting</b>: "UDP mode does not support the -k or --keep-open options"</summary>
->
-> Old versions of ncat do not accept `-k` in UDP mode. Ubuntu (and so WSL) installs ncat 7.80, which stops with:
-> ```
-> Ncat: UDP mode does not support the -k or --keep-open options, except with --exec or --sh-exec. QUITTING.
-> ```
-> Check in WSL (or Linux) which version you have:
-> ```bash
-> ncat --version
-> ```
-> If you see `Ncat: Version 7.80 ( https://nmap.org/ncat )`, your ncat does not support `-k` in UDP mode: use the workaround below. On macOS Homebrew installs a recent version (7.97), where `-k` works.
->
-> Workaround: as UDP server use `server-udp.py` (in [05_SOCKET](./)) instead of `ncat -u -l -k 8888`. It listens on the same port 8888, accepts datagrams from any client, and prints each one with the address of the sender.
-> </details>
 
 ---
 
@@ -160,7 +143,7 @@ lsof -nP -i UDP:8888
 
 ### Command
 
-Start the server again (`ncat -u -l -k 8888`). In a third pane, start the capture (on macOS write `lo0` instead of `lo`):
+Start the server again (`ncat -u -l -k 8888`). In a third pane, start the capture:
 
 ```bash
 sudo tcpdump -i lo -n -A udp port 8888
@@ -169,7 +152,7 @@ Start the client, type `hello` and press Enter.
 
 **tcpdump output**
 ```
-listening on lo0, link-type NULL (BSD loopback), snapshot length 524288 bytes
+listening on lo, link-type EN10MB (Ethernet), snapshot length 262144 bytes
 16:54:52.557863 IP 127.0.0.1.52290 > 127.0.0.1.8888: UDP, length 6
 E..".T..@............B"....!hello
 ```

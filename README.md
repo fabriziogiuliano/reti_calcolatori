@@ -6,7 +6,7 @@ Lab material for *Computer Networking* (Kurose & Ross). Each folder is one lab: 
 
 Follow [00_PYTHON_ENVIRONMENT_SETUP](00_PYTHON_ENVIRONMENT_SETUP/): it installs conda and creates the environment `reti_calcolatori` (Python 3.11).
 
-From lab 08 on, the labs emulate a slow or lossy link with `tc` on the loopback ([`emulate_channel.sh`](09_CONGESTION_CTL/emulate_channel.sh)): they need Linux (or WSL) and `sudo`.
+From lab 08 on, the labs emulate a slow or lossy link with `tc` on the loopback ([`emulate_channel.sh`](09_CONGESTION_CTL/emulate_channel.sh)): they need `sudo`.
 
 ## Labs
 

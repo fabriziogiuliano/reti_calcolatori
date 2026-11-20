@@ -2,6 +2,8 @@
 
 Every lab of the course runs in the same conda environment, `reti_calcolatori`: Python 3.11 plus the few libraries the labs need (hypercorn for HTTP/2, aiosmtpd for the mail server). Set it up once, at the beginning of the course, and activate it every time you open a terminal.
 
+The course runs on **Ubuntu 26.04 LTS**.
+
 ## Files
 
 | File | What it is |
@@ -9,17 +11,7 @@ Every lab of the course runs in the same conda environment, `reti_calcolatori`: 
 | `setup_env.sh` | Creates the environment, installs the Python packages and checks the command-line tools |
 | `requirements.txt` | The Python packages installed by `setup_env.sh` |
 
-The course works on macOS, Linux and Windows. On Windows we use WSL, which is Linux running inside Windows: after Step 0, WSL users follow the Linux instructions everywhere.
-
 ---
-
-## Step 0. Windows only: install WSL
-
-The labs use Unix tools (`ncat`, `dig`, `tmux`), so on Windows we work inside WSL. Open PowerShell as administrator and run:
-```
-wsl --install
-```
-Restart the PC and open the *Ubuntu* app: from now on, every command of the course is typed there. More details: [install WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
 
 ## Step 1. Install conda
 
@@ -27,27 +19,48 @@ Skip this step if `conda --version` already prints a version (a full Anaconda is
 
 We use [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install), the minimal installer of conda: only conda and Python, everything else is installed when needed.
 
-Download the installer and run it. `$(uname -m)` picks the right version for your processor by itself (`arm64` or `x86_64` on macOS, `x86_64` or `aarch64` on Linux).
-
-**macOS**
+**1. Download the installer** into your home folder. `$(uname -m)` picks the right version for your processor by itself (`x86_64` or `aarch64`):
 ```bash
-curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-$(uname -m).sh
-bash Miniconda3-latest-MacOSX-$(uname -m).sh
-```
-**Linux and WSL**
-```bash
+cd ~
 curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-$(uname -m).sh
+```
+
+**2. Run it** (no `sudo`: conda is installed in your home folder, only for your user):
+```bash
 bash Miniconda3-latest-Linux-$(uname -m).sh
 ```
-On every system, answer `yes` to the license, press Enter to accept the default folder, and answer `yes` when it asks whether to initialize conda. Then close the terminal and open a new one, and check:
+
+The installer asks four questions. Answer like this:
+
+| The installer shows | You type |
+|---|---|
+| `Please, press ENTER to continue` | Enter. The license appears: press Space to scroll it to the end (or `q` to skip it) |
+| `Do you accept the license terms? [yes\|no]` | `yes` |
+| `Miniconda3 will now be installed into this location:`<br>`[/home/<you>/miniconda3] >>>` | Enter, to keep the default folder |
+| `Proceed with initialization? [yes\|no]`<br>`[no] >>>` | **`yes`**. The default is `no`: if you just press Enter, conda will not work in new terminals |
+
+At the end it prints `Thank you for installing Miniconda3!`.
+
+**3. Open a new terminal** (close the old one) and check:
 ```bash
 conda --version
 ```
 **Expected output**
 ```
-conda 24.11.1
+conda 26.9.4
 ```
-Your version may be different.
+Your version may be different. The prompt now starts with `(base)`: this is conda's default environment, we will not use it.
+
+**4. Accept the Terms of Service of the Anaconda channels.** Recent versions of conda ask for it once, before creating the first environment:
+```bash
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+```
+
+**5. Delete the installer**, it is no longer needed:
+```bash
+rm ~/Miniconda3-latest-Linux-*.sh
+```
 
 ## Step 2. Get the course folder
 
@@ -68,7 +81,7 @@ It creates the environment `reti_calcolatori` (if it does not exist yet), instal
 >>> Checking command-line tools
   [ok]      curl
   [ok]      nc
-  [missing] telnet   (macOS: brew install ...  Linux: sudo apt install ...)
+  [missing] telnet   (sudo apt install ...)
   [ok]      ncat
   ...
 >>> Done. Run: conda activate reti_calcolatori
@@ -94,21 +107,12 @@ Activate the environment in every new terminal and in every tmux pane: each one 
 
 ## Step 5. Install the missing tools
 
-If Step 3 printed some `[missing]` lines, install those tools.
-
-**macOS**, with [Homebrew](https://brew.sh). `curl`, `nc`, `dig`, `host`, `tcpdump` and `traceroute` are already part of macOS:
-```bash
-brew install nmap telnet tmux
-brew install --cask wireshark
-```
-`ncat` is part of the `nmap` package.
-
-**Linux (Ubuntu/Debian) and WSL**
+If Step 3 printed some `[missing]` lines, install the tools:
 ```bash
 sudo apt update
-sudo apt install curl netcat-openbsd ncat telnet dnsutils tcpdump traceroute tmux wireshark
+sudo apt install curl netcat-openbsd ncat telnet bind9-dnsutils tcpdump traceroute tmux wireshark
 ```
-`dig` and `host` are part of `dnsutils`. On WSL, install Wireshark on Windows instead ([wireshark.org](https://www.wireshark.org/download.html)): it sees the real network cards of the PC.
+`dig` and `host` are part of `bind9-dnsutils`.
 
 Then run `setup_env.sh` again: every line should be `[ok]`.
 
@@ -116,15 +120,11 @@ Then run `setup_env.sh` again: every line should be `[ok]`.
 
 ## Common problems
 
-**`conda: command not found`.** The installer did not initialize your shell, or the terminal is still the old one. Open a new terminal. If it still fails, run `~/miniconda3/bin/conda init` followed by the name of your shell (`zsh` on macOS, `bash` on Linux and WSL), then open a new terminal.
+**`conda: command not found`.** The installer did not initialize your shell, or the terminal is still the old one. Open a new terminal. If it still fails, run `~/miniconda3/bin/conda init bash`, then open a new terminal.
 
 **`python` is not 3.11, or `No module named 'hypercorn'`.** The environment is not active in this terminal (or in this tmux pane): run `conda activate reti_calcolatori`.
 
-**`CondaToSNonInteractiveError` during Step 3.** Recent versions of conda ask you to accept the Terms of Service of the Anaconda channels once. Accept them and run Step 3 again:
-```bash
-conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
-conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
-```
+**`CondaToSNonInteractiveError` during Step 3.** The Terms of Service of the Anaconda channels were not accepted: run point 4 of Step 1, then Step 3 again.
 
 **`EnvironmentNameNotFound: reti_calcolatori`.** The environment was never created: run Step 3.
 

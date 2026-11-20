@@ -1,14 +1,12 @@
-# Forging packets with Scapy (Linux / macOS)
+# Forging packets with Scapy
 
 Reference: Kurose & Ross, *Computer Networking*, Ch. 3 (Sec. 3.3: UDP and the UDP checksum)
 
 Scapy is a Python library that builds packets **field by field**: you choose every header value (addresses, ports, TTL, checksum...) and send the packet on the network. Install: it is in the `reti_calcolatori` environment (see [00_PYTHON_ENVIRONMENT_SETUP](../00_PYTHON_ENVIRONMENT_SETUP/README.md)).
 
-Windows: run everything inside WSL (Ubuntu), as on Linux.
-
 **Root is needed**: building a packet is allowed to everyone, sending one is not. Start the Scapy shell as root with the Python of the environment: `sudo $(which scapy)` (a plain `sudo scapy` would not find the environment). All the commands below are typed inside the Scapy shell (`>>>` prompt), unless they say otherwise.
 
-Loopback interface: `lo` on Linux / WSL, `lo0` on macOS.
+Loopback interface: `lo`.
 
 ### The Scapy functions used in this lab
 
@@ -122,21 +120,6 @@ ncat -u -l -k 8888
 ```
 
 > [!WARNING]
-> <details>
-> <summary><b>Troubleshooting</b>: "UDP mode does not support the -k or --keep-open options"</summary>
->
-> Old versions of ncat do not accept `-k` in UDP mode. Ubuntu (and so WSL) installs ncat 7.80, which stops with:
-> ```
-> Ncat: UDP mode does not support the -k or --keep-open options, except with --exec or --sh-exec. QUITTING.
-> ```
-> Check in WSL (or Linux) which version you have:
-> ```bash
-> ncat --version
-> ```
-> If you see `Ncat: Version 7.80 ( https://nmap.org/ncat )`, your ncat does not support `-k` in UDP mode: use the workaround below. On macOS Homebrew installs a recent version (7.97), where `-k` works.
->
-> Workaround: as UDP server use `server-udp.py` (in [05_SOCKET](../05_SOCKET/)) instead of `ncat -u -l -k 8888`. It listens on the same port 8888, accepts datagrams from any client, and prints each one with the address of the sender.
-> </details>
 
 ### Command
 
@@ -167,7 +150,7 @@ The same steps are in the script `scapy_udp_sender.py` (random payload instead o
 
 ### Command
 
-In a third pane, start `scapy_udp_sniffer.py` as root (set `IFACE` to `lo` on Linux / WSL, `lo0` on macOS). Then send `pkt` again from the Scapy shell.
+In a third pane, start `scapy_udp_sniffer.py` as root (`IFACE = "lo"`). Then send `pkt` again from the Scapy shell.
 
 ```python
 send(pkt)
@@ -259,7 +242,7 @@ Scapy plays the role of a noisy channel: it computes the checksum of `ciao`, the
 
 The receiver that checks here is **tcpdump**: with `-vv` (very verbose) it recomputes the checksum of every packet and flags the wrong ones. (We do not use a socket as receiver: on the loopback the kernel may skip the check, because a packet that never leaves the machine cannot be corrupted.)
 
-Setup: the Scapy shell in the right pane, and the capture in the left pane (on macOS write `lo0`):
+Setup: the Scapy shell in the right pane, and the capture in the left pane:
 
 ```bash
 sudo tcpdump -i lo -n -vv udp port 8888

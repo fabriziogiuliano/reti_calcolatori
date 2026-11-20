@@ -322,7 +322,7 @@ Work in pairs.
 2. Student B knows only the start path (e.g. `/start`) and must rebuild the whole chain using only curl, without looking at the code. Draw it on paper: `/start --301--> ... --200`.
 3. Swap roles.
 
-To play on two different machines, B uses A's IP address instead of `localhost` (`ifconfig | grep 'inet '` on macOS, `hostname -I` on Linux):
+To play on two different machines, B uses A's IP address instead of `localhost` (`hostname -I`):
 ```bash
 curl -iL http://<IP_OF_A>:8000/start
 ```

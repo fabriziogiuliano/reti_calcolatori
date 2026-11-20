@@ -53,7 +53,7 @@ Start `quic_server.py` in the server terminal. Leave it running for all the exer
 listening on 127.0.0.1:12000 (UDP)
 ```
 
-Start the channel of lab 09 in the client terminal (Linux / WSL):
+Start the channel of lab 09 in the client terminal:
 ```bash
 ../../09_CONGESTION_CTL/emulate_channel.sh start
 ```

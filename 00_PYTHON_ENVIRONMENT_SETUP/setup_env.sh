@@ -25,10 +25,10 @@ python -m pip install -r requirements.txt
 # 3. Command-line tools used in the READMEs (checked, not installed)
 echo ">>> Checking command-line tools"
 for tool in curl nc telnet ncat dig host tcpdump traceroute tmux wireshark; do
-    if command -v "$tool" >/dev/null 2>&1 || { [ "$tool" = wireshark ] && [ -d /Applications/Wireshark.app ]; }; then
+    if command -v "$tool" >/dev/null 2>&1; then
         echo "  [ok]      $tool"
     else
-        echo "  [missing] $tool   (macOS: brew install ...  Linux: sudo apt install ...)"
+        echo "  [missing] $tool   (sudo apt install ...)"
     fi
 done
 
