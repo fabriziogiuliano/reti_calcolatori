@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 300" font-family="Helvetica, Arial, sans-serif">
+  <title>Bandwidth from two samples of the port counter</title>
+  <rect width="1000" height="300" fill="#fff"/>
+  <line x1="80" y1="250" x2="620" y2="250" stroke="#4a5866" stroke-width="2"/>
+  <text x="630" y="255" font-size="12" fill="#6b7783">time</text>
+  <rect x="160" y="150" width="90" height="100" fill="#cfe1f2" stroke="#1f7fc4" stroke-width="2"/>
+  <rect x="400" y="80" width="90" height="170" fill="#cfe1f2" stroke="#1f7fc4" stroke-width="2"/>
+  <rect x="400" y="80" width="90" height="70" fill="#f6d9b0" stroke="#e08a1e" stroke-width="2"/>
+  <line x1="250" y1="150" x2="400" y2="150" stroke="#9aa5b1" stroke-dasharray="4 4"/>
+  <g font-size="13" text-anchor="middle" fill="#1f2a33">
+    <text x="205" y="272">t</text><text x="445" y="272">t + 1 s</text>
+    <text x="205" y="140">2 000 000 B</text><text x="445" y="70">3 250 000 B</text>
+  </g>
+  <text x="500" y="120" font-size="13" font-weight="bold" fill="#b8650a">1 250 000 B</text>
+  <text x="500" y="138" font-size="12" fill="#b8650a">sent in 1 s</text>
+  <text x="205" y="292" text-anchor="middle" font-size="11" fill="#8a96a3">tx_bytes of the port</text>
+  <rect x="660" y="95" width="320" height="110" rx="8" fill="#f5f7f9" stroke="#d5dbe1"/>
+  <text x="680" y="125" font-size="13" fill="#1f2a33">1 250 000 B × 8 = 10 000 000 bit</text>
+  <text x="680" y="150" font-size="13" fill="#1f2a33">in 1 second</text>
+  <text x="680" y="185" font-size="18" font-weight="bold" fill="#1f7fc4">= 10 Mbit/s</text>
+</svg>

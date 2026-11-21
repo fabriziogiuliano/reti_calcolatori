@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1000 400" font-family="Helvetica, Arial, sans-serif">
+  <title>template_write: the controller writes a rule into the switch every 10 seconds</title>
+  <defs>
+    <linearGradient id="swTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a9ad9"/><stop offset="1" stop-color="#2585c9"/></linearGradient>
+    <linearGradient id="swFront" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1667a3"/><stop offset="1" stop-color="#0d4f82"/></linearGradient>
+    <marker id="wa" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="3" markerHeight="3" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#fff"/></marker>
+    <marker id="ga" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4a5866"/></marker>
+    <symbol id="switch" viewBox="-55 -30 110 60" overflow="visible">
+      <path d="M-46,-18 L-30,-28 L50,-28 L34,-18 Z" fill="url(#swTop)" stroke="#0d4f82" stroke-width="1"/>
+      <rect x="-46" y="-18" width="80" height="30" fill="url(#swFront)"/>
+      <path d="M34,-18 L50,-28 L50,2 L34,12 Z" fill="#0d4f82"/>
+      <g stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round">
+        <line x1="-38" y1="-10" x2="-14" y2="-10" marker-end="url(#wa)"/>
+        <line x1="26" y1="-10" x2="2" y2="-10" marker-end="url(#wa)"/>
+        <line x1="-14" y1="3" x2="-38" y2="3" marker-end="url(#wa)"/>
+        <line x1="2" y1="3" x2="26" y2="3" marker-end="url(#wa)"/>
+      </g>
+    </symbol>
+    <symbol id="pc" viewBox="-32 -30 64 60" overflow="visible">
+      <rect x="-30" y="-28" width="60" height="40" rx="3" fill="#eef2f5" stroke="#4a5866" stroke-width="2"/>
+      <rect x="-25" y="-23" width="50" height="30" fill="#cfe1f2"/>
+      <rect x="-5" y="12" width="10" height="8" fill="#4a5866"/>
+      <rect x="-18" y="20" width="36" height="5" rx="2" fill="#4a5866"/>
+    </symbol>
+    <symbol id="server" viewBox="-26 -36 52 72" overflow="visible">
+      <rect x="-24" y="-34" width="48" height="68" rx="4" fill="#4a5866"/>
+      <g fill="#7d8b98"><rect x="-18" y="-26" width="36" height="5" rx="1"/><rect x="-18" y="-16" width="36" height="5" rx="1"/><rect x="-18" y="-6" width="36" height="5" rx="1"/></g>
+      <circle cx="12" cy="22" r="3" fill="#6cc04a"/>
+    </symbol>
+  </defs>
+  <rect width="1000" height="400" fill="#fff"/>
+  <use xlink:href="#server" x="244" y="14" width="52" height="72"/>
+  <text x="270" y="108" text-anchor="middle" font-size="15" font-weight="bold" fill="#1f2a33">controller</text>
+  <use xlink:href="#switch" x="675" y="30" width="110" height="60"/>
+  <text x="727" y="108" text-anchor="middle" font-size="15" font-weight="bold" fill="#1f2a33">switch s1</text>
+  <g stroke="#c5ccd3" stroke-width="2" stroke-dasharray="4 4"><line x1="270" y1="120" x2="270" y2="350"/><line x1="727" y1="120" x2="727" y2="350"/></g>
+
+  <line x1="722" y1="170" x2="278" y2="170" stroke="#4a5866" stroke-width="2" marker-end="url(#ga)"/>
+  <text x="500" y="160" text-anchor="middle" font-size="13" fill="#1f2a33">FEATURES_REPLY: "hello, I am s1"</text>
+
+  <rect x="285" y="215" width="425" height="120" rx="8" fill="#f5f7f9" stroke="#d5dbe1"/>
+  <text x="297" y="234" font-size="11" fill="#8a96a3">every 10 seconds, one of the two</text>
+  <line x1="278" y1="265" x2="722" y2="265" stroke="#c0392b" stroke-width="2" marker-end="url(#ga)"/>
+  <text x="500" y="255" text-anchor="middle" font-size="13" fill="#1f2a33">FLOW_MOD add: in_port=1 → drop</text>
+  <line x1="278" y1="310" x2="722" y2="310" stroke="#3c8d4f" stroke-width="2" marker-end="url(#ga)"/>
+  <text x="500" y="300" text-anchor="middle" font-size="13" fill="#1f2a33">FLOW_MOD delete: the same rule</text>
+  <text x="745" y="269" font-size="12" fill="#c0392b">h1 blocked</text>
+  <text x="745" y="314" font-size="12" fill="#3c8d4f">h1 passes</text>
+
+  <g font-size="13" font-weight="bold" fill="#fff" text-anchor="middle">
+    <circle cx="40" cy="170" r="14" fill="#e08a1e"/><text x="40" y="175">1</text>
+    <circle cx="40" cy="265" r="14" fill="#e08a1e"/><text x="40" y="270">2</text>
+    <circle cx="40" cy="310" r="14" fill="#e08a1e"/><text x="40" y="315">3</text>
+  </g>
+  <g font-family="Menlo, Consolas, monospace" font-size="13" fill="#1f7fc4">
+    <text x="62" y="175">switch_connected()</text>
+    <text x="62" y="270">every_10_seconds()</text>
+    <text x="62" y="315">write_rule()</text>
+  </g>
+  <g font-size="11" fill="#8a96a3">
+    <text x="62" y="191">remembers the switch</text>
+    <text x="62" y="286">block / unblock</text>
+    <text x="62" y="331">sends the FLOW_MOD</text>
+  </g>
+  <text x="500" y="385" text-anchor="middle" font-size="12" fill="#6b7783">no answer comes back: the switch just applies the rule</text>
+</svg>

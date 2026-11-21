@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1000 330" font-family="Helvetica, Arial, sans-serif">
+  <title>Lab topology: h1 - s1 - s2 - h2</title>
+  <defs>
+    <linearGradient id="rtTop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a9ad9"/><stop offset="1" stop-color="#1f7fc4"/>
+    </linearGradient>
+    <linearGradient id="rtSide" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1667a3"/><stop offset="1" stop-color="#0d4f82"/>
+    </linearGradient>
+    <marker id="wa" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#ffffff"/>
+    </marker>
+
+    <!-- router, Cisco style: cylinder with arrows -->
+    <symbol id="router" viewBox="-52 -30 104 64" overflow="visible">
+      <path d="M-48,-8 v20 a48,17 0 0 0 96,0 v-20 z" fill="url(#rtSide)"/>
+      <ellipse cx="0" cy="-8" rx="48" ry="17" fill="url(#rtTop)" stroke="#0d4f82" stroke-width="1"/>
+      <g stroke="#ffffff" stroke-width="3" fill="none" stroke-linecap="round">
+        <line x1="-36" y1="-8" x2="-12" y2="-8" marker-end="url(#wa)"/>
+        <line x1="36" y1="-8" x2="12" y2="-8" marker-end="url(#wa)"/>
+        <line x1="-4" y1="-11" x2="-12" y2="-21" marker-end="url(#wa)"/>
+        <line x1="4" y1="-5" x2="12" y2="5" marker-end="url(#wa)"/>
+      </g>
+    </symbol>
+
+    <!-- workstation -->
+    <symbol id="pc" viewBox="-32 -30 64 60" overflow="visible">
+      <rect x="-30" y="-28" width="60" height="40" rx="3" fill="#eef2f5" stroke="#4a5866" stroke-width="2"/>
+      <rect x="-25" y="-23" width="50" height="30" fill="#cfe1f2"/>
+      <rect x="-5" y="12" width="10" height="8" fill="#4a5866"/>
+      <rect x="-18" y="20" width="36" height="5" rx="2" fill="#4a5866"/>
+    </symbol>
+
+    <!-- server -->
+    <symbol id="server" viewBox="-26 -36 52 72" overflow="visible">
+      <rect x="-24" y="-34" width="48" height="68" rx="4" fill="#4a5866"/>
+      <g fill="#7d8b98">
+        <rect x="-18" y="-26" width="36" height="5" rx="1"/>
+        <rect x="-18" y="-16" width="36" height="5" rx="1"/>
+        <rect x="-18" y="-6" width="36" height="5" rx="1"/>
+      </g>
+      <circle cx="12" cy="22" r="3" fill="#6cc04a"/>
+    </symbol>
+  </defs>
+
+  <rect width="1000" height="330" fill="#ffffff"/>
+
+  <!-- controller -->
+  <use xlink:href="#server" x="474" y="34" width="52" height="72"/>
+  <text x="500" y="132" text-anchor="middle" font-size="15" font-weight="bold" fill="#1f2a33">SDN controller</text>
+  <text x="500" y="150" text-anchor="middle" font-size="12" fill="#6b7783">os-ken · rest_router</text>
+  <g stroke="#9aa5b1" stroke-width="1.5" stroke-dasharray="5 5" fill="none">
+    <path d="M462,160 L368,238"/>
+    <path d="M538,160 L632,238"/>
+  </g>
+  <text x="400" y="200" text-anchor="end" font-size="11" fill="#8a96a3">OpenFlow 1.3</text>
+  <text x="600" y="200" font-size="11" fill="#8a96a3">OpenFlow 1.3</text>
+
+  <!-- links -->
+  <g stroke="#4a5866" stroke-width="2.5">
+    <line x1="132" y1="262" x2="312" y2="262"/>
+    <line x1="408" y1="262" x2="592" y2="262"/>
+    <line x1="688" y1="262" x2="868" y2="262"/>
+  </g>
+
+  <!-- nodes -->
+  <use xlink:href="#pc" x="68" y="232" width="64" height="60"/>
+  <use xlink:href="#router" x="308" y="236" width="104" height="64"/>
+  <use xlink:href="#router" x="588" y="236" width="104" height="64"/>
+  <use xlink:href="#pc" x="868" y="232" width="64" height="60"/>
+
+  <g font-size="16" font-weight="bold" fill="#1f2a33" text-anchor="middle">
+    <text x="100" y="318">h1</text>
+    <text x="360" y="318">s1</text>
+    <text x="640" y="318">s2</text>
+    <text x="900" y="318">h2</text>
+  </g>
+
+  <!-- interface addresses (last byte) -->
+  <g font-size="12" fill="#1f7fc4">
+    <text x="140" y="252">.1</text>
+    <text x="270" y="252">.254</text>
+    <text x="416" y="252">.254</text>
+    <text x="552" y="252">.253</text>
+    <text x="696" y="252">.254</text>
+    <text x="846" y="252">.2</text>
+  </g>
+
+  <!-- subnets -->
+  <g font-size="13" fill="#6b7783" text-anchor="middle">
+    <text x="222" y="290">10.1.1.0/24</text>
+    <text x="500" y="290">200.0.0.0/24</text>
+    <text x="778" y="290">192.168.1.0/24</text>
+  </g>
+</svg>

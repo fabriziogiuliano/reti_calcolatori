@@ -8,6 +8,8 @@ Follow [00_PYTHON_ENVIRONMENT_SETUP](00_PYTHON_ENVIRONMENT_SETUP/): it installs 
 
 From lab 08 on, the labs emulate a slow or lossy link with `tc` on the loopback ([`emulate_channel.sh`](09_CONGESTION_CTL/emulate_channel.sh)): they need `sudo`.
 
+Lab 12 (network emulation with Containernet) has its own installation and its own conda environment, `cn`: see [12_CONTAINERNET](12_CONTAINERNET/).
+
 ## Labs
 
 **Tools and application layer** (Kurose & Ross, Ch. 1-2)
@@ -37,3 +39,9 @@ From lab 08 on, the labs emulate a slow or lossy link with `tc` on the loopback 
 | [09_CONGESTION_CTL](09_CONGESTION_CTL/) | TCP congestion control on an emulated bottleneck: NewReno, Cubic, BBR, and who gets the link | – |
 | [10_PERFORMANCE_IPERF](10_PERFORMANCE_IPERF/) | iperf, TCP vs UDP: rate, RTT, queue size, bufferbloat, BBR vs Cubic | – |
 | [11_QUIC/11_1_QUIC](11_QUIC/11_1_QUIC/) | QUIC, a reliable transport on UDP: streams, Reno vs Cubic | – |
+
+**Network layer: emulation and SDN** (Kurose & Ross, Ch. 4-5)
+
+| Folder | Topic | Exercise |
+|---|---|---|
+| [12_CONTAINERNET](12_CONTAINERNET/) | emulated networks of hosts, switches and routers: OpenFlow, SDN controllers, network monitoring, OSPF | in each lab |
