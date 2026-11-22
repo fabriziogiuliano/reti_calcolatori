@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="70 42 460 130" font-family="Helvetica, Arial, sans-serif">
+  <title>Topology: h1 (10.0.0.1) - s1 - h2 (10.0.0.2)</title>
+  <defs>
+    <linearGradient id="swTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a9ad9"/><stop offset="1" stop-color="#2585c9"/></linearGradient>
+    <linearGradient id="swFront" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1667a3"/><stop offset="1" stop-color="#0d4f82"/></linearGradient>
+    <marker id="wa" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="3" markerHeight="3" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#fff"/></marker>
+    <marker id="ga" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4a5866"/></marker>
+    <symbol id="switch" viewBox="-55 -30 110 60" overflow="visible">
+      <path d="M-46,-18 L-30,-28 L50,-28 L34,-18 Z" fill="url(#swTop)" stroke="#0d4f82" stroke-width="1"/>
+      <rect x="-46" y="-18" width="80" height="30" fill="url(#swFront)"/>
+      <path d="M34,-18 L50,-28 L50,2 L34,12 Z" fill="#0d4f82"/>
+      <g stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round">
+        <line x1="-38" y1="-10" x2="-14" y2="-10" marker-end="url(#wa)"/>
+        <line x1="26" y1="-10" x2="2" y2="-10" marker-end="url(#wa)"/>
+        <line x1="-14" y1="3" x2="-38" y2="3" marker-end="url(#wa)"/>
+        <line x1="2" y1="3" x2="26" y2="3" marker-end="url(#wa)"/>
+      </g>
+    </symbol>
+    <symbol id="pc" viewBox="-32 -30 64 60" overflow="visible">
+      <rect x="-30" y="-28" width="60" height="40" rx="3" fill="#eef2f5" stroke="#4a5866" stroke-width="2"/>
+      <rect x="-25" y="-23" width="50" height="30" fill="#cfe1f2"/>
+      <rect x="-5" y="12" width="10" height="8" fill="#4a5866"/>
+      <rect x="-18" y="20" width="36" height="5" rx="2" fill="#4a5866"/>
+    </symbol>
+    <symbol id="server" viewBox="-26 -36 52 72" overflow="visible">
+      <rect x="-24" y="-34" width="48" height="68" rx="4" fill="#4a5866"/>
+      <g fill="#7d8b98"><rect x="-18" y="-26" width="36" height="5" rx="1"/><rect x="-18" y="-16" width="36" height="5" rx="1"/><rect x="-18" y="-6" width="36" height="5" rx="1"/></g>
+      <circle cx="12" cy="22" r="3" fill="#6cc04a"/>
+    </symbol>
+  </defs>
+
+<rect x="70" y="42" width="460" height="130" fill="#fff"/>
+
+  <!-- links -->
+  <line x1="150" y1="110" x2="254" y2="110" stroke="#4a5866" stroke-width="2.5"/>
+  <line x1="350" y1="110" x2="450" y2="110" stroke="#4a5866" stroke-width="2.5"/>
+
+  <!-- h1 -->
+  <use xlink:href="#pc" x="88" y="80" width="64" height="60"/>
+  <text x="120" y="68" text-anchor="middle" font-size="14" font-weight="bold" fill="#1f2a33">h1</text>
+  <text x="120" y="155" text-anchor="middle" font-size="11" fill="#1f7fc4">10.0.0.1</text>
+
+  <!-- s1 -->
+  <use xlink:href="#switch" x="245" y="80" width="110" height="60"/>
+  <text x="300" y="68" text-anchor="middle" font-size="14" font-weight="bold" fill="#1f2a33">s1</text>
+  <g font-size="11" fill="#1f7fc4">
+    <text x="240" y="126">1</text>
+    <text x="356" y="126">2</text>
+  </g>
+
+  <!-- h2 -->
+  <use xlink:href="#pc" x="448" y="80" width="64" height="60"/>
+  <text x="480" y="68" text-anchor="middle" font-size="14" font-weight="bold" fill="#1f2a33">h2</text>
+  <text x="480" y="155" text-anchor="middle" font-size="11" fill="#1f7fc4">10.0.0.2</text>
+</svg>

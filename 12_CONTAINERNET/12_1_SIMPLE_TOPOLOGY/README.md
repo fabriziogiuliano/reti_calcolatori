@@ -2,9 +2,9 @@
 
 Two hosts and one OpenFlow switch:
 
-```
-h1 (10.0.0.1) ---- s1 ---- h2 (10.0.0.2)
-```
+
+![Topology](img/link.svg)
+
 
 Containernet must be installed as in [12_0_INSTALL](../12_0_INSTALL).
 
