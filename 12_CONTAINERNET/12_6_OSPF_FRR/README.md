@@ -1,4 +1,4 @@
-# 12.5 Dynamic routing with OSPF (Dijkstra)
+# 12.6 Dynamic routing with OSPF (Dijkstra)
 
 Four routers, each one a Docker container running **[FRRouting](https://frrouting.org/)** (FRR), compute their routing tables by themselves with **OSPF**: every router learns the whole map of the network and runs **Dijkstra** on it. You compute the same shortest paths by hand, check them on the routers, break some links and watch the network reroute.
 

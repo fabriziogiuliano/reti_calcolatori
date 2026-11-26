@@ -1,6 +1,6 @@
-# 12.3 Monitoring
+# 12.4 Monitoring
 
-The [template](../12_2_TEMPLATE_CONTROLLER/) becomes a tool: every second the controller measures the **bandwidth** of every port and the **delay** of every link.
+The [template](../12_3_TEMPLATE_CONTROLLER/) becomes a tool: every second the controller measures the **bandwidth** of every port and the **delay** of every link.
 
 ![Topology](img/topology.svg)
 

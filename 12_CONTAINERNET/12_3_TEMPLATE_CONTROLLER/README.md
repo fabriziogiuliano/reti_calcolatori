@@ -1,6 +1,6 @@
-# 12.2 Template controller
+# 12.3 Template controller
 
-Two minimal SDN controllers written with os-ken: one **reads** from the switches, one **writes** into them. They are the pieces you need to build any tool; in [12_3_MONITORING](../12_3_MONITORING/) they become a real one.
+Two minimal SDN controllers written with os-ken: one **reads** from the switches, one **writes** into them. They are the pieces you need to build any tool; in [12_4_MONITORING](../12_4_MONITORING/) they become a real one.
 
 ![Topology](img/topology.svg)
 

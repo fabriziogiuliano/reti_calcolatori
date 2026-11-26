@@ -13,7 +13,7 @@ pip install os-ken==4.2.2
 
 ## Two terminals
 
-The controller and the network are two separate programs: they talk over TCP, like a real controller and real switches. Use two terminals (or two tmux panes), both in the folder `12_CONTAINERNET/12_4_REST_ROUTER`, both with `conda activate cn`.
+The controller and the network are two separate programs: they talk over TCP, like a real controller and real switches. Use two terminals (or two tmux panes), both in the folder `12_CONTAINERNET/12_5_REST_ROUTER`, both with `conda activate cn`.
 
 ```mermaid
 flowchart LR

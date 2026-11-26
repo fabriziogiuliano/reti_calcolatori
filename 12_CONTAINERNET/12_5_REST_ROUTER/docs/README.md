@@ -1,6 +1,6 @@
 # rest_router: an SDN router with os-ken
 
-This wiki explains the lab of `12_4_REST_ROUTER`: two OpenFlow switches become **IPv4 routers**, and all the routing logic runs in a **controller** written in Python with [os-ken](https://opendev.org/openstack/os-ken). The routers are configured at runtime with a **REST API**, like a real SDN network.
+This wiki explains the lab of `12_5_REST_ROUTER`: two OpenFlow switches become **IPv4 routers**, and all the routing logic runs in a **controller** written in Python with [os-ken](https://opendev.org/openstack/os-ken). The routers are configured at runtime with a **REST API**, like a real SDN network.
 
 ![Topology of the lab](img/topology.svg)
 

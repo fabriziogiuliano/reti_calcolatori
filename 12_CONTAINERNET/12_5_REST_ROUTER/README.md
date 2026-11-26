@@ -1,4 +1,4 @@
-# 12.4 REST router: an SDN router configured via REST
+# 12.5 REST router: an SDN router configured via REST
 
 Two OpenFlow switches become IPv4 routers; the routing logic runs in an [os-ken](https://opendev.org/openstack/os-ken) controller, configured at runtime with a REST API.
 

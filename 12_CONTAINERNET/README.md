@@ -10,12 +10,13 @@ Install Containernet once, following [12_0_INSTALL](12_0_INSTALL/). It creates t
 
 | Folder | Topic | Kurose & Ross |
 |---|---|---|
-| [12_0_INSTALL](12_0_INSTALL/) | install Containernet on Ubuntu 26.04 (with a patch) and the environment `cn` | – |
-| [12_1_SIMPLE_TOPOLOGY](12_1_SIMPLE_TOPOLOGY/) | two hosts and a switch; flow rules written by hand; enter a host with `mnexec` | 4.4 |
-| [12_2_TEMPLATE_CONTROLLER](12_2_TEMPLATE_CONTROLLER/) | the pieces of an SDN controller (os-ken) in a minimal template | 5.5 |
-| [12_3_MONITORING](12_3_MONITORING/) | the template becomes a tool: the controller measures bandwidth and delay of every link, every second | 5.5, 5.7 |
-| [12_4_REST_ROUTER](12_4_REST_ROUTER/) | an SDN controller turns two switches into routers, configured via REST; [wiki](12_4_REST_ROUTER/docs/README.md) with diagrams | 4.4, 5.5 |
-| [12_5_OSPF_FRR](12_5_OSPF_FRR/) | dynamic routing: four FRRouting routers in containers run OSPF (Dijkstra); link failures and costs | 5.2, 5.3 |
+| [12_0_INSTALL](12_0_INSTALL/) | install Containernet on Ubuntu 26.04 (with a patch) and the environment `cn`; first network: without a controller the ping fails, a different switch fixes it | – |
+| [12_1_PERFORMANCE](12_1_PERFORMANCE/) | measure the network with ping and iperf (TCP, UDP): bandwidth, delay and loss changed by hand, switches in cascade, a bottleneck, two flows sharing it; one terminal per host with `mnexec` | 1.4 |
+| [12_2_SIMPLE_OVS_CONF](12_2_SIMPLE_OVS_CONF/) | the switch of 12_0 with an empty table, filled by hand with flow rules | 4.4 |
+| [12_3_TEMPLATE_CONTROLLER](12_3_TEMPLATE_CONTROLLER/) | the pieces of an SDN controller (os-ken) in a minimal template | 5.5 |
+| [12_4_MONITORING](12_4_MONITORING/) | the template becomes a tool: the controller measures bandwidth and delay of every link, every second | 5.5, 5.7 |
+| [12_5_REST_ROUTER](12_5_REST_ROUTER/) | an SDN controller turns two switches into routers, configured via REST; [wiki](12_5_REST_ROUTER/docs/README.md) with diagrams | 4.4, 5.5 |
+| [12_6_OSPF_FRR](12_6_OSPF_FRR/) | dynamic routing: four FRRouting routers in containers run OSPF (Dijkstra); link failures and costs | 5.2, 5.3 |
 
 Follow them in order: each lab uses what the previous one introduced.
 
@@ -28,7 +29,7 @@ conda activate cn
 sudo "$CONDA_PREFIX/bin/python" script.py
 ```
 
-**Controller and network are two programs.** In the labs with a controller (12_2, 12_3, 12_4) use two terminals: the controller first, without `sudo` (`python run_controller.py <app>`), then the network.
+**Controller and network are two programs.** In the labs with a controller (12_3, 12_4, 12_5) use two terminals: the controller first, without `sudo` (`python run_controller.py <app>`), then the network.
 
 **Clean after an interrupted run.** If a script stops in the middle (Ctrl+C, closed terminal), the next run fails with `File exists` or `already in use`. Clean everything with:
 

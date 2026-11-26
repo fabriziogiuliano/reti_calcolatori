@@ -3,7 +3,8 @@ from mininet.node import RemoteController
 from mininet.cli import CLI
 
 # Creazione dell'oggetto rete
-net = Mininet()
+# controller=None: no controller, so nobody fills the table of s1
+net = Mininet(controller=None)
 # Creazione dei nodi Host
 #h1 = net.addHost( 'h1' )
 #h2 = net.addHost( 'h2' )
